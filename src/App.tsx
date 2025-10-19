@@ -167,7 +167,7 @@ const parseNumber = (value: string | null | undefined): number => {
 
 const resolveLogVolume = (logEl: Element): number => {
   const preferredCategories = ['m3sub', 'm3 fub', 'm3fub', 'm3 (price)', 'm3ub', 'm3sob']
-  const volumeNodes = Array.from(logEl.querySelectorAll('LogVolume'))
+  const volumeNodes = Array.from(logEl.getElementsByTagNameNS('*', 'LogVolume'))
 
   const normaliseCategory = (value: string | null) => value?.trim().toLowerCase().replace(/\s+/g, ' ') ?? ''
 
@@ -223,6 +223,7 @@ const ForestryHarvesterApp: React.FC = () => {
   const [currentPath, setCurrentPath] = useState(() => (typeof window !== 'undefined' ? window.location.pathname : '/'))
   const [showBulkPaste, setShowBulkPaste] = useState(false)
   const [bulkPriceText, setBulkPriceText] = useState('')
+  const [hasUploaded, setHasUploaded] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -305,10 +306,16 @@ const ForestryHarvesterApp: React.FC = () => {
     const parser = new DOMParser()
     const xmlDoc = parser.parseFromString(text, 'text/xml')
 
+    const elementsByTag = (element: Element | Document, tag: string) =>
+      Array.from(element.getElementsByTagNameNS('*', tag))
+
+    const getFirstText = (element: Element | Document, tag: string) =>
+      elementsByTag(element, tag)[0]?.textContent?.trim() ?? undefined
+
     const speciesNameByKey = new Map<string, string>()
-    xmlDoc.querySelectorAll('SpeciesGroupDefinition').forEach((definition) => {
-      const key = definition.querySelector('SpeciesGroupKey')?.textContent?.trim()
-      const name = definition.querySelector('SpeciesGroupName')?.textContent?.trim()
+    elementsByTag(xmlDoc, 'SpeciesGroupDefinition').forEach((definition) => {
+      const key = getFirstText(definition, 'SpeciesGroupKey')
+      const name = getFirstText(definition, 'SpeciesGroupName')
       if (key && name) {
         speciesNameByKey.set(key, name)
       }
@@ -317,12 +324,12 @@ const ForestryHarvesterApp: React.FC = () => {
     const parsedStems: Stem[] = []
     let logCount = 0
 
-    const stemElements = xmlDoc.querySelectorAll('Stem')
+    const stemElements = elementsByTag(xmlDoc, 'Stem')
     stemElements.forEach((stemEl, index) => {
       const stemKey = stemEl.getAttribute('StemKey') ?? `stem_${index}`
       const harvestDate = stemEl.getAttribute('HarvestDate') ?? new Date().toISOString()
 
-      const speciesGroupKey = stemEl.querySelector('SpeciesGroupKey')?.textContent?.trim() ?? undefined
+      const speciesGroupKey = getFirstText(stemEl, 'SpeciesGroupKey')
       const speciesName = speciesGroupKey ? speciesNameByKey.get(speciesGroupKey) : undefined
       const speciesCategory = mapSpeciesNameToCategory(speciesName)
 
@@ -330,11 +337,10 @@ const ForestryHarvesterApp: React.FC = () => {
         const attrValue = parseNumber(stemEl.getAttribute('DBH'))
         if (attrValue > 0) return attrValue
 
-        const dbhNode =
-          stemEl.querySelector('SingleTreeProcessedStem > DBH') ??
-          stemEl.querySelector('DBH') ??
-          stemEl.querySelector('SingleTreeProcessedStem DBH')
-        const textValue = parseNumber(dbhNode?.textContent ?? null)
+        const dbhElement =
+          elementsByTag(stemEl, 'DBH')[0] ??
+          elementsByTag(stemEl, 'SingleTreeProcessedStem').flatMap((node) => elementsByTag(node, 'DBH'))[0]
+        const textValue = parseNumber(dbhElement?.textContent ?? null)
         return textValue > 0 ? textValue : undefined
       })()
 
@@ -355,7 +361,7 @@ const ForestryHarvesterApp: React.FC = () => {
       }
 
       let aggregatedLogVolume = 0
-      const logElements = stemEl.querySelectorAll('Log')
+      const logElements = elementsByTag(stemEl, 'Log')
 
       logElements.forEach((logEl) => {
         logCount += 1
@@ -396,7 +402,13 @@ const ForestryHarvesterApp: React.FC = () => {
       }
 
       setStems(allStems)
-      setStatus(`Parsed ${allStems.length} stems, ${totalLogCount} logs`)
+      if (allStems.length > 0) {
+        setStatus(`Parsed ${allStems.length} stems, ${totalLogCount} logs`)
+        setHasUploaded(true)
+      } else {
+        setStatus('No stems detected in the uploaded files. Please verify the HPR file and try again.')
+        setHasUploaded(false)
+      }
     },
     [parseHPRFile],
   )
@@ -523,6 +535,7 @@ const ForestryHarvesterApp: React.FC = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+    setHasUploaded(false)
   }, [])
 
   const aggregateBySpeciesAndDbh = useCallback(() => {
@@ -651,6 +664,12 @@ const ForestryHarvesterApp: React.FC = () => {
     setResults(baseResults)
   }, [aggregateBySpeciesAndDbh, getLegacyPriceForVolume, params, speciesDivisors])
 
+  useEffect(() => {
+    if (stems.length > 0) {
+      calculateResults()
+    }
+  }, [stems, calculateResults])
+
   const downloadResults = useCallback(() => {
     if (results.length === 0) return
 
@@ -699,53 +718,75 @@ const ForestryHarvesterApp: React.FC = () => {
           />
         ) : (
           <div className="space-y-12">
-            <Card className="border border-green-900/70 bg-background/60 p-6">
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-lg font-semibold tracking-tight text-green-700">File Upload</h2>
-                  <p className="text-sm text-muted-foreground">Upload your HPR file</p>
-                </div>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={triggerFileDialog}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      triggerFileDialog()
-                    }
-                  }}
-                  onDragOver={handleDragOver}
-                  onDrop={handleFileDrop}
-                  className="relative flex h-48 flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-green-900/70 bg-green-900/10 text-center transition hover:border-green-700 hover:bg-green-900/15 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 focus:ring-offset-background"
-                >
-                  <Upload className="size-10 text-green-300" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-green-700">Drag and drop file here</p>
-                    <p className="text-xs text-muted-foreground">or</p>
+            {!hasUploaded ? (
+              <Card className="border border-green-900/70 bg-background/60 p-6">
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-tight text-green-700">File Upload</h2>
+                    <p className="text-sm text-muted-foreground">Upload your HPR file</p>
                   </div>
-                  <Button type="button" variant="default" onClick={triggerFileDialog} className="bg-green-700 hover:bg-green-600">
-                    Browse files
-                  </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".hpr,.zip"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={triggerFileDialog}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        triggerFileDialog()
+                      }
+                    }}
+                    onDragOver={handleDragOver}
+                    onDrop={handleFileDrop}
+                    className="relative flex h-48 flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-green-900/70 bg-green-900/10 text-center transition hover:border-green-700 hover:bg-green-900/15 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 focus:ring-offset-background"
+                  >
+                    <Upload className="size-10 text-green-300" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-green-700">Drag and drop file here</p>
+                      <p className="text-xs text-muted-foreground">or</p>
+                    </div>
+                    <Button type="button" variant="default" onClick={triggerFileDialog} className="bg-green-700 hover:bg-green-600">
+                      Browse files
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".hpr,.zip"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+                    <span>Accepted formats: .hpr or .zip</span>
+                    <Button onClick={handleReset} variant="outline" size="sm">
+                      <X className="mr-2 size-4" />
+                      Reset
+                    </Button>
+                  </div>
+                  {status ? <p className="text-xs text-muted-foreground">{status}</p> : null}
                 </div>
-                <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-                  <span>Accepted formats: .hpr or .zip</span>
-                  <Button onClick={handleReset} variant="outline" size="sm">
-                    <X className="mr-2 size-4" />
-                    Reset
-                  </Button>
+              </Card>
+            ) : (
+              <Card className="border border-green-900/70 bg-background/60 p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-tight text-green-700">File uploaded</h2>
+                    <p className="text-sm text-muted-foreground">
+                      {status || 'Your HPR data has been loaded. You can upload another file at any time.'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setHasUploaded(false)}>
+                      Upload another file
+                    </Button>
+                    <Button variant="ghost" onClick={handleReset}>
+                      <X className="mr-2 size-4" />
+                      Reset all
+                    </Button>
+                  </div>
                 </div>
-                {status ? <p className="text-xs text-muted-foreground">{status}</p> : null}
-              </div>
-            </Card>
+              </Card>
+            )}
 
             <Card className="bg-background/60 p-6 shadow-sm">
               <div className="space-y-6">
