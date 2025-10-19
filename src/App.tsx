@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { Download, Upload, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -1189,7 +1190,8 @@ const ForestryHarvesterApp: React.FC = () => {
             </Card>
           </div>
         )}
-      </div>
+    </div>
+      <Analytics />
     </div>
   )
 }
