@@ -1,0 +1,49 @@
+Bakgrund
+Dagens prissättningssystem för ersättning till skogsägare av virkesråvara bygger normalt på en prislista som beskriver priset per sortiment, stock eller per stam Möller m.fl. (2007). Priset är oftast ett pris fritt bilväg för avverkade volymer. Intäkterna är enligt modellen ovan väl specificerade beroende av sortiment, stock- eller träddimensioner och kvalitetsegenskaper. Kostnaderna däremot är svårt för skogsägarna att få belyst före avverkning om inte en mängd data om skogen samlas in. En parameter som ofta ingår är avverkningsobjektets medelstam som är svår eller dyr att mäta före avverkning. Förutom att medelstammen är svår att mäta före avverkning så är en allmän uppfattning bland många skogsägare och avverkningsentreprenörer att medelstam är en mindre bra mätparameter. Orsaken är att ett avverkningsbestånd, med en viss medelstamvolym, kan vara homogent med liknande stamstorlekar eller ett heterogent bestånd med stor diameterspridning från klena till grova stammar.    
+För att öka transparensen i virkesaffärerna mellan köpare och säljare bör därför modellen för kostnadsberäkning utvecklas. 
+Under de senaste 5 åren har skördarnas datainsamling i samband med avverkning förändrats från ackumulerade data i matrisform till data för enskilda träd som är koordinatsatta (Arlinger m.fl. 2013). De nya data som skördaren samlar in och lagrar har skapat möjligheter att beräkna en mängd nya nyckeltal som kan användas vid prissättning. Exempel på sådana nyckeltal är trädvolym eller stamantal per hektar och det enskilda trädets egenskaper som dimensioner och form. Även höjden för varje enskilt träd kan beräknas. Möjligheten att utveckla en modell baserat på det enskilda trädets egenskaper har därigenom gjorts praktiskt möjligt. I figur 1 nedan så illustreras tidsåtgången per avverkat träd baserat på skördardata där tidpunkt för fällning och kap inkluderats.
+
+Skördare avverkad tid, volym per träd och kostnad
+För enskilda träd så lagras antingen tidpunkten när träden är färdigupparbetad eller när trädet fälls i skördarens hpr-fil. I studien så användes alla tider för träd som understeg 600 sekunder (10 minuter). Tiden för ett enskilt träd beräknas som tidpunkt från att föregående träd avslutas till att det aktuella trädet avslutas. I modellen som användes så ingår förflyttning, fällning, upparbetning och mindre avbrott som tillsammans understiger 600 sekunder för ett enskilt träd. Träd där denna tid överstiger 10 minuter filtrerades bort i studien. Exempel på sådana träd är första trädet för dagen, efter en längre rast, och träd där ett längre avbrott skett, det senare kan exempelvis vara kalibrering vilket normalt tar mer än 10 minuter. Däremot bör exempelvis ett kedjebyte rymmas inom 10 minuters-filtret.
+Vid beräkning av avverkad volym per timme så summerades alla träds volymer respektive tider i en DBH eller stamstorleksklass. Sedan delades volymen med avverkad tid. Volymen som används är upparbetad m3fub enligt skördarnas mätning. 
+För beräkning av skördarkostnader så användes schablonbeloppet 1800 kr/ G15h.
+Avverkad tid per stam (sek/ st) per DBH- eller stamvolym-klass = 
+ Avverkad tider(s)/ ( Antal stammar(st))
+
+Avverkad tid per stam (sek/ st) per DBH- eller stamvolym-klass = 
+ Avverkad tider(s)/ ( Antal stammar(st))
+
+Avverkad volym per timme (m3fub/ h) per DBH- eller stamvolym-klass = 
+ Avverkad volym(m3fub)/ ( Avverkade tider(s) / 3600)
+
+Avverkad volym per timme (m3fub/ h) per DBH- eller stamvolym-klass = 
+ Avverkad volym(m3fub)/ ( Avverkade tider(s) / 3600)
+
+
+Kostnad per avverkad kubikmeter (kr/ m3fub) per DBH- eller stamvolym-klass = 
+ ( Avverkade tider(s) / 3600)/  Avverkad volym(m3fub) * 1800 kr
+
+Kostnad per avverkad kubikmeter (kr/ m3fub) per DBH- eller stamvolym-klass = 
+ ( Avverkade tider(s) / 3600)/  Avverkad volym(m3fub) * 1800 kr
+
+
+
+Skotning
+För skotning så användes Skogforsk modell för terminaltid som omfattar tid för lastning, körning under lastning och lossning (Brunberg 2004). För beräkning så antas slutavverkning med stor skotare. Volymen 280 m3fub/ha har antagits.  I beräkningen så har skotningskostnaden 1500 kr/h antagits. Dessutom har medelskotningsavståndet 300 meter antagits och kostnaden 4 kr/ m3fub per 100 meter skotningsavstånd, dvs 12 kr/ m3fub.
+Funktionerna som använts är: 
+T = K1 * (5,7 + K2 * UT + 11,45 * UT)/ UT
+T = tidsåtgång i G15 min/ m3fub
+UT = uttaget i m3fub/ha
+K1 = 1, K2 = 0,73
+Skotningskostnad per m3fub = T/ 60 * SK + SA/100 * 4 = 22,7 + 12 = 34,7 
+SK = skotningskostnad kr/ G15h ( 1500 kr default)
+SA = Skotningsavstånd  ( 300 meter default)
+I studien så användes samma skotningskostnad oberoende av objektens beskaffenhet dvs trädslag, volym per ha eller medelstam/ stock. En ökning av volymen per ha med 100 m3fub minskar enligt funktionen kostnaden med 1,6 kr/ m3fub och en minskning av volymen ökar kostnaden med 1,9 kr/ m3fub. För de flesta slutavverkningar ligger volymen inom detta intervall, dvs 180-380 m3fub per hektar.
+Total kostnad
+För total drivningskostnad i studien så summerades skotningskostnad enligt ovan och framräknad avverkningskostnad enligt de olika modellerna. 
+
+
+
+
+
+
