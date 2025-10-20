@@ -4,7 +4,6 @@ import { Download, Upload, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -218,7 +217,6 @@ const ForestryHarvesterApp: React.FC = () => {
     c11: 11.45,
   })
 
-  const [showAssumptions, setShowAssumptions] = useState(false)
   const [newTotals, setNewTotals] = useState<NewTotals | null>(null)
   const [oldModelSummary, setOldModelSummary] = useState<LegacyTotals | null>(null)
   const [currentPath, setCurrentPath] = useState(() => (typeof window !== 'undefined' ? window.location.pathname : '/'))
@@ -758,7 +756,7 @@ const ForestryHarvesterApp: React.FC = () => {
                     />
                   </div>
                   <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-                    <span>Accepted formats: .hpr or .zip</span>
+                    <span>Accepted format: .hpr</span>
                     <Button onClick={handleReset} variant="outline" size="sm">
                       <X className="mr-2 size-4" />
                       Reset
@@ -1113,79 +1111,80 @@ const ForestryHarvesterApp: React.FC = () => {
                   </div>
                 )}
 
-                {results.length > 0 && newTotals ? (
-                  <div className="grid gap-4 rounded-lg border border-border/40 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Total stems</p>
-                      <p className="text-lg font-semibold text-green-800">{newTotals.totalStems}</p>
+                {results.length > 0 && newTotals && oldModelSummary ? (
+                  <div className="grid gap-4 rounded-lg border border-border/40 p-4 md:grid-cols-2">
+                    <div className="flex h-full flex-col gap-4 rounded-lg border border-green-900/40 bg-background/70 p-4">
+                      <div>
+                        <h3 className="text-sm uppercase tracking-wide text-green-700">New model · per-bin pricing</h3>
+                        <p className="text-xs text-muted-foreground">Tariffs calculated from DBH + species bins.</p>
+                      </div>
+                      <div className="grid gap-3 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Total stems</span>
+                          <span className="font-semibold text-green-800">{newTotals.totalStems}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Total volume</span>
+                          <span className="font-semibold text-green-800">{newTotals.totalVolume.toFixed(3)} m³</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Weighted price</span>
+                          <span className="font-semibold text-green-800">{newTotals.averagePrice.toFixed(2)} kr/m³</span>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-green-700/40 bg-green-900/20 px-4 py-3 text-center">
+                        <p className="text-[11px] uppercase tracking-wide text-green-600">Projected value</p>
+                        <p className="text-2xl font-semibold text-green-700">{newTotals.totalPrice.toFixed(2)} kr</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-green-700">Value by species</p>
+                        <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                          {SUPPORTED_SPECIES.map((species) => (
+                            <div key={`${species}-summary`} className="rounded-md border border-green-900/30 bg-green-900/10 p-3 text-center">
+                              <p className="text-[11px] uppercase tracking-wide text-green-600">{SPECIES_LABELS[species]}</p>
+                              <p className="text-lg font-semibold text-green-700">
+                                {speciesSummaries[species].totalPrice.toFixed(2)} kr
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {speciesSummaries[species].stems} stems · {speciesSummaries[species].volume.toFixed(3)} m³
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Total volume</p>
-                      <p className="text-lg font-semibold text-green-800">{newTotals.totalVolume.toFixed(2)} m³</p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Weighted price</p>
-                      <p className="text-lg font-semibold text-green-800">{newTotals.averagePrice.toFixed(2)} kr/m³</p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Total price</p>
-                      <p className="text-lg font-semibold text-green-800">{newTotals.totalPrice.toFixed(2)} kr</p>
+
+                    <div className="flex h-full flex-col gap-4 rounded-lg border border-green-900/40 bg-background/70 p-4">
+                      <div>
+                        <h3 className="text-sm uppercase tracking-wide text-green-700">Legacy model · single bin</h3>
+                        <p className="text-xs text-muted-foreground">
+                          Entire stand priced with the dataset average stem.
+                        </p>
+                      </div>
+                      <div className="grid gap-3 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Average stem volume</span>
+                          <span className="font-semibold text-green-800">{oldModelSummary.averageVolume.toFixed(3)} m³</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Price for average stem</span>
+                          <span className="font-semibold text-green-800">{oldModelSummary.averagePrice.toFixed(2)} kr/m³</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Total volume</span>
+                          <span className="font-semibold text-green-800">{oldModelSummary.totalVolume.toFixed(3)} m³</span>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-green-700/40 bg-green-900/20 px-4 py-3 text-center">
+                        <p className="text-[11px] uppercase tracking-wide text-green-600">Legacy payout</p>
+                        <p className="text-2xl font-semibold text-green-700">{oldModelSummary.totalPrice.toFixed(2)} kr</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Base price entries set: {legacyPrices.filter((entry) => entry.price > 0).length}/{legacyPrices.length}
+                      </p>
                     </div>
                   </div>
                 ) : null}
-
-                {results.length > 0 && (
-                  <div className="space-y-3 rounded-lg border border-border/40 p-4">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="showAssumptions"
-                        checked={showAssumptions}
-                        onCheckedChange={(checked) => setShowAssumptions(checked === true)}
-                      />
-                      <Label htmlFor="showAssumptions" className="text-sm">
-                        Show legacy model summary
-                      </Label>
-                    </div>
-
-                    {showAssumptions && oldModelSummary ? (
-                      <div className="grid gap-4 text-xs sm:grid-cols-2 lg:grid-cols-3">
-                        <div className="rounded-md border border-border/40 p-3">
-                          <p className="text-muted-foreground">Legacy total stems</p>
-                          <p className="text-lg font-semibold text-green-800">{oldModelSummary.totalStems}</p>
-                        </div>
-                        <div className="rounded-md border border-border/40 p-3">
-                          <p className="text-muted-foreground">Average stem volume</p>
-                          <p className="text-lg font-semibold text-green-800">
-                            {oldModelSummary.averageVolume.toFixed(3)} m³
-                          </p>
-                        </div>
-                        <div className="rounded-md border border-border/40 p-3">
-                          <p className="text-muted-foreground">Price for average</p>
-                          <p className="text-lg font-semibold text-green-800">
-                            {oldModelSummary.averagePrice.toFixed(2)} kr/m³
-                          </p>
-                        </div>
-                        <div className="rounded-md border border-border/40 p-3">
-                          <p className="text-muted-foreground">Legacy total volume</p>
-                          <p className="text-lg font-semibold text-green-800">
-                            {oldModelSummary.totalVolume.toFixed(2)} m³
-                          </p>
-                        </div>
-                        <div className="rounded-md border border-border/40 p-3">
-                          <p className="text-muted-foreground">Legacy total price</p>
-                          <p className="text-lg font-semibold text-green-800">
-                            {oldModelSummary.totalPrice.toFixed(2)} kr
-                          </p>
-                        </div>
-                        <div className="rounded-md border border-border/40 p-3 sm:col-span-2 lg:col-span-3">
-                          <p className="text-muted-foreground">
-                            Base price inputs set: {legacyPrices.filter((entry) => entry.price > 0).length}/{legacyPrices.length}
-                          </p>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                )}
               </div>
             </Card>
           </div>
