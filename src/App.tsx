@@ -38,6 +38,8 @@ interface CalculationParams {
   c11: number
 }
 
+type CalculationConstants = Pick<CalculationParams, 'k1' | 'k2' | 'c11' | 'maxPerTreeTime'>
+
 interface ResultRow {
   species: SpeciesCategory
   dbhClass: number
@@ -730,6 +732,8 @@ const ForestryHarvesterApp: React.FC = () => {
             divisors={speciesDivisors}
             onChange={(next) => setSpeciesDivisors(next)}
             onReset={() => setSpeciesDivisors(normaliseDivisors(DEFAULT_SPECIES_DIVISORS))}
+            constants={{ k1: params.k1, k2: params.k2, c11: params.c11, maxPerTreeTime: params.maxPerTreeTime }}
+            onConstantChange={(key, value) => setParams((prev) => ({ ...prev, [key]: value }))}
           />
         ) : (
           <div className="space-y-12">
@@ -810,110 +814,91 @@ const ForestryHarvesterApp: React.FC = () => {
                   <p className="text-sm text-muted-foreground">Adjust the rates used for both the old and new pricing models.</p>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="harvestingCostRate" className="text-xs uppercase tracking-wide text-green-700">
-                      Harvesting cost (kr/G15h)
-                    </Label>
-                    <Input
-                      id="harvestingCostRate"
-                      type="number"
-                      value={params.harvestingCostRate}
-                      onChange={(event) =>
-                        setParams((prev) => ({ ...prev, harvestingCostRate: parseFloat(event.target.value) || 0 }))
-                      }
-                      className="bg-background/60"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="forwardingSK" className="text-xs uppercase tracking-wide text-green-700">
-                      Forwarding cost (kr/G15h)
-                    </Label>
-                    <Input
-                      id="forwardingSK"
-                      type="number"
-                      value={params.forwardingSK}
-                      onChange={(event) =>
-                        setParams((prev) => ({ ...prev, forwardingSK: parseFloat(event.target.value) || 0 }))
-                      }
-                      className="bg-background/60"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="skiddingDistanceSA" className="text-xs uppercase tracking-wide text-green-700">
-                      Skidding distance (m)
-                    </Label>
-                    <Input
-                      id="skiddingDistanceSA"
-                      type="number"
-                      value={params.skiddingDistanceSA}
-                      onChange={(event) =>
-                        setParams((prev) => ({ ...prev, skiddingDistanceSA: parseFloat(event.target.value) || 0 }))
-                      }
-                      className="bg-background/60"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="maxPerTreeTime" className="text-xs uppercase tracking-wide text-green-700">
-                      Max per-tree time (s)
-                    </Label>
-                    <Input
-                      id="maxPerTreeTime"
-                      type="number"
-                      value={params.maxPerTreeTime}
-                      onChange={(event) =>
-                        setParams((prev) => ({ ...prev, maxPerTreeTime: parseInt(event.target.value, 10) || 0 }))
-                      }
-                      className="bg-background/60"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="standRemovalUT" className="text-xs uppercase tracking-wide text-green-700">
-                      Stand removal (m³fub/ha)
-                    </Label>
-                    <Input
-                      id="standRemovalUT"
-                      type="number"
-                      value={params.standRemovalUT}
-                      onChange={(event) =>
-                        setParams((prev) => ({ ...prev, standRemovalUT: parseFloat(event.target.value) || 0 }))
-                      }
-                      className="bg-background/60"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wide text-green-700">Constants</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={params.k1}
-                        onChange={(event) => setParams((prev) => ({ ...prev, k1: parseFloat(event.target.value) || 0 }))}
-                        aria-label="K1"
-                        className="bg-background/60"
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={params.k2}
-                        onChange={(event) => setParams((prev) => ({ ...prev, k2: parseFloat(event.target.value) || 0 }))}
-                        aria-label="K2"
-                        className="bg-background/60"
-                      />
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={params.c11}
-                        onChange={(event) => setParams((prev) => ({ ...prev, c11: parseFloat(event.target.value) || 0 }))}
-                        aria-label="C11"
-                        className="bg-background/60"
-                      />
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="space-y-4 rounded-lg border border-green-900/30 bg-green-900/5 p-4">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-green-700">
+                        Harvesting calculation
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Parameters used to determine the harvesting productivity and tariffs.
+                      </p>
                     </div>
+                    <div className="grid gap-4 sm:grid-cols-1">
+                      <div className="space-y-2">
+                        <Label htmlFor="harvestingCostRate" className="text-xs uppercase tracking-wide text-green-700">
+                          Harvesting cost (kr/G15h)
+                        </Label>
+                        <Input
+                          id="harvestingCostRate"
+                          type="number"
+                          value={params.harvestingCostRate}
+                          onChange={(event) =>
+                            setParams((prev) => ({ ...prev, harvestingCostRate: parseFloat(event.target.value) || 0 }))
+                          }
+                          className="bg-background/60"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-lg border border-green-900/30 bg-green-900/5 p-4">
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-green-700">
+                        Forwarding calculation
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Configure the forwarding rate inputs used in the cost projections.
+                      </p>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="forwardingSK" className="text-xs uppercase tracking-wide text-green-700">
+                          Forwarding cost (kr/G15h)
+                        </Label>
+                        <Input
+                          id="forwardingSK"
+                          type="number"
+                          value={params.forwardingSK}
+                          onChange={(event) =>
+                            setParams((prev) => ({ ...prev, forwardingSK: parseFloat(event.target.value) || 0 }))
+                          }
+                          className="bg-background/60"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="skiddingDistanceSA" className="text-xs uppercase tracking-wide text-green-700">
+                          Skidding distance (m)
+                        </Label>
+                        <Input
+                          id="skiddingDistanceSA"
+                          type="number"
+                          value={params.skiddingDistanceSA}
+                          onChange={(event) =>
+                            setParams((prev) => ({ ...prev, skiddingDistanceSA: parseFloat(event.target.value) || 0 }))
+                          }
+                          className="bg-background/60"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="standRemovalUT" className="text-xs uppercase tracking-wide text-green-700">
+                          Stand removal (m³fub/ha)
+                        </Label>
+                        <Input
+                          id="standRemovalUT"
+                          type="number"
+                          value={params.standRemovalUT}
+                          onChange={(event) =>
+                            setParams((prev) => ({ ...prev, standRemovalUT: parseFloat(event.target.value) || 0 }))
+                          }
+                          className="bg-background/60"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Advanced harvesting and forwarding constants, including the max per-tree time and k1, k2, c11, can be
+                      adjusted from the admin panel.
+                    </p>
                   </div>
                 </div>
 
@@ -1231,9 +1216,18 @@ interface AdminPageProps {
   divisors: SpeciesDivisors
   onChange: (next: SpeciesDivisors) => void
   onReset: () => void
+  constants: CalculationConstants
+  onConstantChange: (key: keyof CalculationConstants, value: number) => void
 }
 
-const AdminPage: React.FC<AdminPageProps> = ({ divisors, onChange, onReset }) => {
+const AdminPage: React.FC<AdminPageProps> = ({ divisors, onChange, onReset, constants, onConstantChange }) => {
+  const [showConstants, setShowConstants] = useState(false)
+
+  const updateConstant = (key: keyof CalculationConstants, raw: string) => {
+    const parsed = Number.parseFloat(raw)
+    onConstantChange(key, Number.isFinite(parsed) ? parsed : 0)
+  }
+
   const updateDivisor = (species: SpeciesCategory, index: number, raw: string) => {
     const trimmed = raw.trim()
     let parsedValue: number | null = null
@@ -1255,17 +1249,86 @@ const AdminPage: React.FC<AdminPageProps> = ({ divisors, onChange, onReset }) =>
 
   return (
     <Card className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">Admin: species divisor table</h2>
           <p className="text-sm text-muted-foreground">
             Adjust the divisor used to convert the harvesting cost rate into SEK/m³ for each species and DBH class. Leave blank to disable pricing for a class.
           </p>
         </div>
-        <Button variant="outline" onClick={onReset}>
-          Reset to defaults
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setShowConstants((prev) => !prev)}>
+            {showConstants ? 'Hide constants' : 'Show constants'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={onReset}>
+            Reset to defaults
+          </Button>
+        </div>
       </div>
+
+      {showConstants ? (
+        <div className="space-y-4 rounded-lg border border-green-900/30 bg-green-900/5 p-4">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-green-700">Advanced constants</h3>
+            <p className="text-xs text-muted-foreground">
+              Coefficients that influence the harvesting cap and forwarding cost calculations. Adjust with care.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-2">
+              <Label htmlFor="constant-maxPerTreeTime" className="text-xs uppercase tracking-wide text-green-700">
+                Max per-tree time (s)
+              </Label>
+              <Input
+                id="constant-maxPerTreeTime"
+                type="number"
+                value={constants.maxPerTreeTime}
+                onChange={(event) => updateConstant('maxPerTreeTime', event.target.value)}
+                className="bg-background/60"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="constant-k1" className="text-xs uppercase tracking-wide text-green-700">
+                k1
+              </Label>
+              <Input
+                id="constant-k1"
+                type="number"
+                step="0.01"
+                value={constants.k1}
+                onChange={(event) => updateConstant('k1', event.target.value)}
+                className="bg-background/60"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="constant-k2" className="text-xs uppercase tracking-wide text-green-700">
+                k2
+              </Label>
+              <Input
+                id="constant-k2"
+                type="number"
+                step="0.01"
+                value={constants.k2}
+                onChange={(event) => updateConstant('k2', event.target.value)}
+                className="bg-background/60"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="constant-c11" className="text-xs uppercase tracking-wide text-green-700">
+                c11
+              </Label>
+              <Input
+                id="constant-c11"
+                type="number"
+                step="0.01"
+                value={constants.c11}
+                onChange={(event) => updateConstant('c11', event.target.value)}
+                className="bg-background/60"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto">
         <Table>
