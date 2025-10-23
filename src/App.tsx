@@ -46,7 +46,7 @@ interface ResultRow {
   totalVolume: number
   productivity: number
   harvestingCost: number
-  skiddingCost: number
+  forwardingCostPerCubicMeter: number
   pricePerCubicMeter: number
   totalCost: number
   totalPrice: number
@@ -57,6 +57,9 @@ interface NewTotals {
   totalVolume: number
   averagePrice: number
   totalPrice: number
+  forwardingCostPerCubicMeter: number
+  totalForwardingCost: number
+  combinedTotal: number
 }
 
 interface LegacyTotals {
@@ -597,8 +600,11 @@ const ForestryHarvesterApp: React.FC = () => {
 
     const standRemoval = params.standRemovalUT
     const forwardingTimeFactor =
-      standRemoval > 0 ? (params.k1 * (5.7 + params.k2 * standRemoval + params.c11 * standRemoval)) / standRemoval : 0
-    const skiddingCost = (forwardingTimeFactor / 60) * params.forwardingSK + (params.skiddingDistanceSA / 100) * 4
+      standRemoval > 0
+        ? (params.k1 * (5.7 + params.k2 * standRemoval + params.c11 * Math.sqrt(standRemoval))) / standRemoval
+        : 0
+    const forwardingCostPerCubicMeter =
+      (forwardingTimeFactor / 60) * params.forwardingSK + (params.skiddingDistanceSA / 100) * 4
 
     SUPPORTED_SPECIES.forEach((species) => {
       const speciesData = aggregated[species]
@@ -619,7 +625,7 @@ const ForestryHarvesterApp: React.FC = () => {
         const divisor = classIndex >= 0 ? speciesDivisors[species]?.[classIndex] ?? null : null
         const pricePerCubicMeter = divisor && divisor > 0 ? params.harvestingCostRate / divisor : 0
         const totalPrice = pricePerCubicMeter * totalVolume
-        const totalCost = harvestingCost + skiddingCost - pricePerCubicMeter
+        const totalCost = harvestingCost + forwardingCostPerCubicMeter - pricePerCubicMeter
 
         baseResults.push({
           species,
@@ -629,7 +635,7 @@ const ForestryHarvesterApp: React.FC = () => {
           totalVolume,
           productivity,
           harvestingCost,
-          skiddingCost,
+          forwardingCostPerCubicMeter,
           pricePerCubicMeter,
           totalCost,
           totalPrice,
@@ -649,6 +655,8 @@ const ForestryHarvesterApp: React.FC = () => {
     const totalPrice = baseResults.reduce((sum, row) => sum + row.totalPrice, 0)
     const averagePrice = totalVolume > 0 ? totalPrice / totalVolume : 0
     const averageVolumePerStem = totalStems > 0 ? totalVolume / totalStems : 0
+    const totalForwardingCost = forwardingCostPerCubicMeter * totalVolume
+    const combinedTotal = totalPrice + totalForwardingCost
 
     const legacyPrice = getLegacyPriceForVolume(averageVolumePerStem)
 
@@ -659,7 +667,15 @@ const ForestryHarvesterApp: React.FC = () => {
       averagePrice: legacyPrice,
       totalPrice: legacyPrice * totalVolume,
     })
-    setNewTotals({ totalStems, totalVolume, averagePrice, totalPrice })
+    setNewTotals({
+      totalStems,
+      totalVolume,
+      averagePrice,
+      totalPrice,
+      forwardingCostPerCubicMeter,
+      totalForwardingCost,
+      combinedTotal,
+    })
     setResults(baseResults)
   }, [aggregateBySpeciesAndDbh, getLegacyPriceForVolume, params, speciesDivisors])
 
@@ -1132,9 +1148,25 @@ const ForestryHarvesterApp: React.FC = () => {
                           <span className="font-semibold text-green-800">{newTotals.averagePrice.toFixed(2)} kr/m³</span>
                         </div>
                       </div>
-                      <div className="rounded-lg border border-green-700/40 bg-green-900/20 px-4 py-3 text-center">
-                        <p className="text-[11px] uppercase tracking-wide text-green-600">Projected value</p>
-                        <p className="text-2xl font-semibold text-green-700">{newTotals.totalPrice.toFixed(2)} kr</p>
+                      <div className="rounded-lg border border-green-700/40 bg-green-900/20 px-4 py-3">
+                        <p className="text-[11px] uppercase tracking-wide text-green-600 text-center">Projected value</p>
+                        <dl className="mt-3 space-y-2 text-sm">
+                          <div className="flex items-center justify-between text-green-800">
+                            <dt className="text-muted-foreground">Harvesting cost</dt>
+                            <dd className="font-semibold">{newTotals.totalPrice.toFixed(2)} kr</dd>
+                          </div>
+                          <div className="flex items-center justify-between text-green-800">
+                            <dt className="text-muted-foreground">Forwarding cost</dt>
+                            <dd className="font-semibold">{newTotals.totalForwardingCost.toFixed(2)} kr</dd>
+                          </div>
+                        </dl>
+                        <div className="mt-3 rounded-md border border-green-700/30 bg-green-900/10 px-3 py-2 text-center">
+                          <p className="text-[11px] uppercase tracking-wide text-green-600">Total</p>
+                          <p className="text-xl font-semibold text-green-700">{newTotals.combinedTotal.toFixed(2)} kr</p>
+                        </div>
+                        <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                          Forwarding: {newTotals.forwardingCostPerCubicMeter.toFixed(2)} kr/m³
+                        </p>
                       </div>
                       <div>
                         <p className="text-xs uppercase tracking-wide text-green-700">Value by species</p>
