@@ -449,86 +449,122 @@ const ForestryHarvesterApp: React.FC = () => {
     fileInputRef.current?.click()
   }, [])
 
-  const handleApplyBulkPricing = useCallback(() => {
-    if (!bulkPriceText.trim()) {
-      setShowBulkPaste(false)
-      return
-    }
-
-    const numericTokensForLine = (line: string) => line.match(/-?\d+(?:[.,]\d+)?/g) ?? []
-
-    setLegacyPrices((previous) => {
-      const next = previous.map((entry) => ({ ...entry }))
-      const assigned = new Set<number>()
-      let fallbackIndex = 0
-
-      const attemptAssign = (index: number, priceToken: string | null) => {
-        if (index < 0 || index >= next.length || !priceToken) return
-        const priceValue = parseNumber(priceToken)
-        if (priceValue > 0) {
-          next[index] = { ...next[index], price: priceValue }
-          assigned.add(index)
-        }
+  const applyBulkPricing = useCallback(
+    (text: string) => {
+      const trimmedText = text.trim()
+      if (!trimmedText) {
+        return false
       }
 
-      const lines = bulkPriceText.split(/\r?\n/)
-      lines.forEach((rawLine) => {
-        const trimmed = rawLine.trim()
-        if (!trimmed) return
+      const numericTokensForLine = (line: string) => line.match(/-?\d+(?:[.,]\d+)?/g) ?? []
+      let updated = false
 
-        const tokens = numericTokensForLine(trimmed)
-        if (tokens.length === 0) return
+      setLegacyPrices((previous) => {
+        const next = previous.map((entry) => ({ ...entry }))
+        const assigned = new Set<number>()
+        let fallbackIndex = 0
 
-        let matchedIndex = -1
-        let matchedVolume: number | null = null
-
-        for (const token of tokens) {
-          const value = parseNumber(token)
-          if (value <= 0) continue
-          const volumeIndex = LEGACY_AVERAGE_VOLUMES.findIndex((volume) => Math.abs(volume - value) < 1e-6)
-          if (volumeIndex !== -1) {
-            matchedIndex = volumeIndex
-            matchedVolume = value
-            break
+        const attemptAssign = (index: number, priceToken: string | null) => {
+          if (index < 0 || index >= next.length || !priceToken) return
+          const priceValue = parseNumber(priceToken)
+          if (priceValue > 0) {
+            next[index] = { ...next[index], price: priceValue }
+            assigned.add(index)
+            updated = true
           }
         }
 
-        let priceToken: string | null = null
+        const lines = trimmedText.split(/\r?\n/)
+        lines.forEach((rawLine) => {
+          const line = rawLine.trim()
+          if (!line) return
 
-        if (matchedIndex !== -1) {
-          priceToken = tokens
-            .map((token) => ({ token, value: parseNumber(token) }))
-            .find(({ value }) => matchedVolume == null || Math.abs(value - matchedVolume) > 1e-6)?.token ?? tokens[tokens.length - 1]
-        } else {
-          while (fallbackIndex < next.length && assigned.has(fallbackIndex)) {
+          const tokens = numericTokensForLine(line)
+          if (tokens.length === 0) return
+
+          let matchedIndex = -1
+          let matchedVolume: number | null = null
+
+          for (const token of tokens) {
+            const value = parseNumber(token)
+            if (value <= 0) continue
+            const volumeIndex = LEGACY_AVERAGE_VOLUMES.findIndex((volume) => Math.abs(volume - value) < 1e-6)
+            if (volumeIndex !== -1) {
+              matchedIndex = volumeIndex
+              matchedVolume = value
+              break
+            }
+          }
+
+          let priceToken: string | null = null
+
+          if (matchedIndex !== -1) {
+            priceToken = tokens
+              .map((token) => ({ token, value: parseNumber(token) }))
+              .find(({ value }) => matchedVolume == null || Math.abs(value - matchedVolume) > 1e-6)?.token ??
+              tokens[tokens.length - 1]
+          } else {
+            while (fallbackIndex < next.length && assigned.has(fallbackIndex)) {
+              fallbackIndex += 1
+            }
+            if (fallbackIndex >= next.length) return
+            matchedIndex = fallbackIndex
             fallbackIndex += 1
+            priceToken = tokens[tokens.length - 1]
           }
-          if (fallbackIndex >= next.length) return
-          matchedIndex = fallbackIndex
-          fallbackIndex += 1
-          priceToken = tokens[tokens.length - 1]
-        }
 
-        if (assigned.has(matchedIndex)) {
-          priceToken = tokens
-            .map((token) => ({ token, value: parseNumber(token) }))
-            .find(({ value }) => value > 0 && (!matchedVolume || Math.abs(value - matchedVolume) > 1e-6))?.token ?? priceToken
-        }
+          if (assigned.has(matchedIndex)) {
+            priceToken = tokens
+              .map((token) => ({ token, value: parseNumber(token) }))
+              .find(({ value }) => value > 0 && (!matchedVolume || Math.abs(value - matchedVolume) > 1e-6))?.token ??
+              priceToken
+          }
 
-        attemptAssign(matchedIndex, priceToken)
+          attemptAssign(matchedIndex, priceToken)
+        })
+
+        return next
       })
 
-      return next
-    })
+      return updated
+    },
+    [setLegacyPrices],
+  )
 
-    setBulkPriceText('')
-    setShowBulkPaste(false)
-  }, [bulkPriceText, setLegacyPrices])
+  const handleApplyBulkPricing = useCallback(() => {
+    const success = applyBulkPricing(bulkPriceText)
+    if (success) {
+      setBulkPriceText('')
+      setShowBulkPaste(false)
+    }
+  }, [applyBulkPricing, bulkPriceText, setBulkPriceText, setShowBulkPaste])
 
   const handleCancelBulkPricing = useCallback(() => {
     setBulkPriceText('')
     setShowBulkPaste(false)
-  }, [])
+  }, [setBulkPriceText, setShowBulkPaste])
+
+  const handlePastePrices = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.readText) {
+      setShowBulkPaste(true)
+      return
+    }
+
+    try {
+      const clipboardText = await navigator.clipboard.readText()
+      const success = applyBulkPricing(clipboardText)
+      if (success) {
+        setBulkPriceText('')
+        setShowBulkPaste(false)
+      } else {
+        setBulkPriceText(clipboardText)
+        setShowBulkPaste(true)
+      }
+    } catch (error) {
+      console.error('Failed to read clipboard contents:', error)
+      setShowBulkPaste(true)
+    }
+  }, [applyBulkPricing, setBulkPriceText, setShowBulkPaste])
 
   const handleReset = useCallback(() => {
     setStems([])
@@ -914,9 +950,9 @@ const ForestryHarvesterApp: React.FC = () => {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setShowBulkPaste((prev) => !prev)}
+                      onClick={handlePastePrices}
                     >
-                      {showBulkPaste ? 'Hide paste' : 'Paste prices'}
+                      Paste prices
                     </Button>
                   </div>
 
@@ -1041,7 +1077,7 @@ const ForestryHarvesterApp: React.FC = () => {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold tracking-tight text-green-700">Price calculation</h2>
+                    <h2 className="text-lg font-semibold tracking-tight text-green-700">Harvesting Price calculation</h2>
                     <p className="text-sm text-muted-foreground">
                       Calculated volume, price, and value per DBH class and species using your uploaded data.
                     </p>
