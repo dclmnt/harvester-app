@@ -78,6 +78,12 @@ interface LegacyPriceEntry {
 }
 
 type SpeciesDivisors = Record<SpeciesCategory, Array<number | null>>
+type Language = 'sv' | 'en'
+type StatusInfo =
+  | { kind: 'filesSelected'; count: number }
+  | { kind: 'parsed'; stems: number; logs: number }
+  | { kind: 'noStems' }
+  | null
 
 const normalizeSpeciesIdentifier = (value: string) =>
   value
@@ -109,10 +115,344 @@ const DEFAULT_SPECIES_DIVISORS: SpeciesDivisors = {
 }
 
 const SUPPORTED_SPECIES: SpeciesCategory[] = ['Tall', 'Gran', 'Löv']
-const SPECIES_LABELS: Record<SpeciesCategory, string> = {
-  Tall: 'Pine',
-  Gran: 'Spruce',
-  Löv: 'Broadleaf',
+const SPECIES_LABELS: Record<Language, Record<SpeciesCategory, string>> = {
+  en: {
+    Tall: 'Pine',
+    Gran: 'Spruce',
+    Löv: 'Broadleaf',
+  },
+  sv: {
+    Tall: 'Tall',
+    Gran: 'Gran',
+    Löv: 'Löv',
+  },
+}
+
+const translations: Record<Language, {
+  languageToggle: { sv: string; en: string }
+  header: { openAdmin: string; backToCalculator: string }
+  upload: {
+    title: string
+    subtitle: string
+    dragAndDrop: string
+    or: string
+    browse: string
+    acceptedFormat: string
+    reset: string
+    fileUploadedTitle: string
+    fileUploadedDescription: string
+    uploadAnother: string
+    resetAll: string
+  }
+  status: {
+    filesSelected: (count: number) => string
+    parsed: (stems: number, logs: number) => string
+    noStems: string
+  }
+  settings: {
+    title: string
+    subtitle: string
+    harvestingTitle: string
+    harvestingDescription: string
+    harvestingCost: string
+    forwardingTitle: string
+    forwardingDescription: string
+    forwardingCost: string
+    skiddingDistance: string
+    standRemoval: string
+    constantsNote: string
+  }
+  legacyPricing: {
+    title: string
+    description: string
+    pasteButton: string
+    pastePlaceholder: string
+    pasteTip: string
+    cancel: string
+    apply: string
+    averageStem: string
+    basePrice: string
+    pricePlaceholder: string
+  }
+  actions: {
+    calculate: string
+    exportCsv: string
+  }
+  tables: {
+    pricePerDbhTitle: string
+    pricePerDbhSubtitle: string
+    harvestingCalculationTitle: string
+    harvestingCalculationSubtitle: string
+    emptyState: string
+    dbh: string
+    stems: string
+    volume: string
+    price: string
+    value: string
+    noStemsMessage: string
+    total: string
+  }
+  newModel: {
+    title: string
+    subtitle: string
+    totalStems: string
+    totalVolume: string
+    weightedPrice: string
+    projectedValue: string
+    harvestingCost: string
+    forwardingCost: string
+    combinedTotal: string
+    forwardingRate: string
+    valueBySpecies: string
+    speciesSummary: (stems: number, volume: number) => string
+  }
+  legacyModel: {
+    title: string
+    subtitle: string
+    averageStemVolume: string
+    priceForAverageStem: string
+    totalVolume: string
+    legacyPayout: string
+    basePriceEntries: (setCount: number, totalCount: number) => string
+  }
+  admin: {
+    title: string
+    description: string
+    hideConstants: string
+    showConstants: string
+    resetDefaults: string
+    advancedConstants: string
+    advancedConstantsDescription: string
+    maxPerTreeTime: string
+    tallDivisor: string
+    granDivisor: string
+    lovDivisor: string
+  }
+}> = {
+  en: {
+    languageToggle: { sv: 'Swedish', en: 'English' },
+    header: {
+      openAdmin: 'Open admin settings',
+      backToCalculator: 'Back to calculator',
+    },
+    upload: {
+      title: 'File Upload',
+      subtitle: 'Upload your HPR file',
+      dragAndDrop: 'Drag and drop file here',
+      or: 'or',
+      browse: 'Browse files',
+      acceptedFormat: 'Accepted format: .hpr',
+      reset: 'Reset',
+      fileUploadedTitle: 'File uploaded',
+      fileUploadedDescription: 'Your HPR data has been loaded. You can upload another file at any time.',
+      uploadAnother: 'Upload another file',
+      resetAll: 'Reset all',
+    },
+    status: {
+      filesSelected: (count) => `${count} files selected`,
+      parsed: (stems, logs) => `Parsed ${stems} stems, ${logs} logs`,
+      noStems: 'No stems detected in the uploaded files. Please verify the HPR file and try again.',
+    },
+    settings: {
+      title: 'Cost and performance settings',
+      subtitle: 'Adjust the rates used for both the old and new pricing models.',
+      harvestingTitle: 'Harvesting calculation',
+      harvestingDescription: 'Parameters used to determine the harvesting productivity and tariffs.',
+      harvestingCost: 'Harvesting cost (kr/G15h)',
+      forwardingTitle: 'Forwarding calculation',
+      forwardingDescription: 'Configure the forwarding rate inputs used in the cost projections.',
+      forwardingCost: 'Forwarding cost (kr/G15h)',
+      skiddingDistance: 'Skidding distance (m)',
+      standRemoval: 'Stand removal (m³fub/ha)',
+      constantsNote:
+        'Advanced harvesting and forwarding constants, including the max per-tree time and k1, k2, c11, can be adjusted from the admin panel.',
+    },
+    legacyPricing: {
+      title: 'Input base price kr/m³fub',
+      description: 'Enter the legacy price list based on average stem volume.',
+      pasteButton: 'Paste prices',
+      pastePlaceholder: 'Paste numbers from a spreadsheet. Example:\n0.20\t110\n0.25\t115',
+      pasteTip:
+        'Tip: copy both columns (average stem and price) or a single column of prices. Values are matched in order when no stem is provided.',
+      cancel: 'Cancel',
+      apply: 'Apply paste',
+      averageStem: 'Average stem (m³)',
+      basePrice: 'Base price (kr/m³fub)',
+      pricePlaceholder: 'e.g. 110',
+    },
+    actions: {
+      calculate: 'Calculate',
+      exportCsv: 'Export CSV',
+    },
+    tables: {
+      pricePerDbhTitle: 'Price per DBH',
+      pricePerDbhSubtitle: 'Harvesting rate divided by your divisor table.',
+      harvestingCalculationTitle: 'Harvesting Price calculation',
+      harvestingCalculationSubtitle:
+        'Calculated volume, price, and value per DBH class and species using your uploaded data.',
+      emptyState: 'Upload an HPR file and run Calculate to see per-species pricing.',
+      dbh: 'DBH',
+      stems: 'Stems (st)',
+      volume: 'Volume (m³)',
+      price: 'Price (kr/m³)',
+      value: 'Value (kr)',
+      noStemsMessage: 'No stems matched this species in the uploaded data.',
+      total: 'Total',
+    },
+    newModel: {
+      title: 'New model · per-bin pricing',
+      subtitle: 'Tariffs calculated from DBH + species bins.',
+      totalStems: 'Total stems',
+      totalVolume: 'Total volume',
+      weightedPrice: 'Weighted price',
+      projectedValue: 'Projected value',
+      harvestingCost: 'Harvesting cost',
+      forwardingCost: 'Forwarding cost',
+      combinedTotal: 'Total',
+      forwardingRate: 'Forwarding:',
+      valueBySpecies: 'Value by species',
+      speciesSummary: (stems, volume) => `${stems} stems · ${volume.toFixed(3)} m³`,
+    },
+    legacyModel: {
+      title: 'Legacy model · single bin',
+      subtitle: 'Entire stand priced with the dataset average stem.',
+      averageStemVolume: 'Average stem volume',
+      priceForAverageStem: 'Price for average stem',
+      totalVolume: 'Total volume',
+      legacyPayout: 'Legacy payout',
+      basePriceEntries: (setCount, totalCount) => `Base price entries set: ${setCount}/${totalCount}`,
+    },
+    admin: {
+      title: 'Admin: species divisor table',
+      description:
+        'Adjust the divisor used to convert the harvesting cost rate into SEK/m³ for each species and DBH class. Leave blank to disable pricing for a class.',
+      hideConstants: 'Hide constants',
+      showConstants: 'Show constants',
+      resetDefaults: 'Reset to defaults',
+      advancedConstants: 'Advanced constants',
+      advancedConstantsDescription:
+        'Coefficients that influence the harvesting cap and forwarding cost calculations. Adjust with care.',
+      maxPerTreeTime: 'Max per-tree time (s)',
+      tallDivisor: 'Pine divisor',
+      granDivisor: 'Spruce divisor',
+      lovDivisor: 'Broadleaf divisor',
+    },
+  },
+  sv: {
+    languageToggle: { sv: 'Svenska', en: 'Engelska' },
+    header: {
+      openAdmin: 'Öppna admininställningar',
+      backToCalculator: 'Tillbaka till kalkylatorn',
+    },
+    upload: {
+      title: 'Filuppladdning',
+      subtitle: 'Ladda upp din HPR-fil',
+      dragAndDrop: 'Dra och släpp filen här',
+      or: 'eller',
+      browse: 'Bläddra bland filer',
+      acceptedFormat: 'Tillåtet format: .hpr',
+      reset: 'Återställ',
+      fileUploadedTitle: 'Fil uppladdad',
+      fileUploadedDescription: 'Din HPR-data har lästs in. Du kan ladda upp en ny fil när som helst.',
+      uploadAnother: 'Ladda upp en ny fil',
+      resetAll: 'Återställ allt',
+    },
+    status: {
+      filesSelected: (count) => `${count} filer valda`,
+      parsed: (stems, logs) => `Bearbetade ${stems} stammar, ${logs} stockar`,
+      noStems: 'Inga stammar hittades i de uppladdade filerna. Kontrollera HPR-filen och försök igen.',
+    },
+    settings: {
+      title: 'Kostnads- och prestationsinställningar',
+      subtitle: 'Justera nivåerna som används för både den gamla och den nya prismodellen.',
+      harvestingTitle: 'Avverkningsberäkning',
+      harvestingDescription: 'Parametrar som används för att beräkna avverkningsproduktivitet och taxor.',
+      harvestingCost: 'Avverkningskostnad (kr/G15h)',
+      forwardingTitle: 'Skotningsberäkning',
+      forwardingDescription: 'Konfigurera indata för skotningen som används i kostnadsprognosen.',
+      forwardingCost: 'Skotningskostnad (kr/G15h)',
+      skiddingDistance: 'Skotningsavstånd (m)',
+      standRemoval: 'Uttag i m³fub/ha',
+      constantsNote:
+        'Avancerade konstanter för avverkning och skotning, inklusive max tid per träd samt k1, k2 och c11, justeras i adminpanelen.',
+    },
+    legacyPricing: {
+      title: 'Ange grundpris kr/m³fub',
+      description: 'Fyll i den gamla prislistan baserad på medelstamsvolym.',
+      pasteButton: 'Klistra in priser',
+      pastePlaceholder: 'Klistra in tal från ett kalkylark. Exempel:\n0.20\t110\n0.25\t115',
+      pasteTip:
+        'Tips: kopiera båda kolumnerna (medelstam och pris) eller en enda kolumn med priser. Värden paras i ordning om ingen stam anges.',
+      cancel: 'Avbryt',
+      apply: 'Använd inklistring',
+      averageStem: 'Medelstam (m³)',
+      basePrice: 'Grundpris (kr/m³fub)',
+      pricePlaceholder: 't.ex. 110',
+    },
+    actions: {
+      calculate: 'Beräkna',
+      exportCsv: 'Exportera CSV',
+    },
+    tables: {
+      pricePerDbhTitle: 'Pris per DBH',
+      pricePerDbhSubtitle: 'Avverkningskostnaden delad med din divisortabell.',
+      harvestingCalculationTitle: 'Avverkningsprisberäkning',
+      harvestingCalculationSubtitle:
+        'Beräknad volym, pris och värde per DBH-klass och trädslag baserat på din uppladdade data.',
+      emptyState: 'Ladda upp en HPR-fil och kör Beräkna för att se priser per trädslag.',
+      dbh: 'DBH',
+      stems: 'Stammar (st)',
+      volume: 'Volym (m³)',
+      price: 'Pris (kr/m³)',
+      value: 'Värde (kr)',
+      noStemsMessage: 'Inga stammar matchade detta trädslag i den uppladdade datan.',
+      total: 'Totalt',
+    },
+    newModel: {
+      title: 'Ny modell · pris per klass',
+      subtitle: 'Taxor beräknade från DBH- och trädslagklasser.',
+      totalStems: 'Antal stammar',
+      totalVolume: 'Total volym',
+      weightedPrice: 'Viktat pris',
+      projectedValue: 'Prognostiserat värde',
+      harvestingCost: 'Avverkningskostnad',
+      forwardingCost: 'Skotningskostnad',
+      combinedTotal: 'Summa',
+      forwardingRate: 'Skotning:',
+      valueBySpecies: 'Värde per trädslag',
+      speciesSummary: (stems, volume) => `${stems} stammar · ${volume.toFixed(3)} m³`,
+    },
+    legacyModel: {
+      title: 'Gammal modell · enkel klass',
+      subtitle: 'Hela beståndet prissätts med datamängdens medelstam.',
+      averageStemVolume: 'Medelstamsvolym',
+      priceForAverageStem: 'Pris för medelstam',
+      totalVolume: 'Total volym',
+      legacyPayout: 'Gammal ersättning',
+      basePriceEntries: (setCount, totalCount) => `Grundprisposter satta: ${setCount}/${totalCount}`,
+    },
+    admin: {
+      title: 'Admin: trädslagens divisortabell',
+      description:
+        'Justera divisorn som omvandlar avverkningskostnaden till kr/m³ för varje trädslag och DBH-klass. Lämna tomt för att inaktivera pris för en klass.',
+      hideConstants: 'Dölj konstanter',
+      showConstants: 'Visa konstanter',
+      resetDefaults: 'Återställ till standard',
+      advancedConstants: 'Avancerade konstanter',
+      advancedConstantsDescription:
+        'Koeficienter som påverkar maxkapning och skotningskostnadsberäkningen. Justera med försiktighet.',
+      maxPerTreeTime: 'Max tid per träd (s)',
+      tallDivisor: 'Tall-divisor',
+      granDivisor: 'Gran-divisor',
+      lovDivisor: 'Löv-divisor',
+    },
+  },
+}
+
+const getInitialLanguage = (): Language => {
+  if (typeof window === 'undefined') return 'sv'
+  const stored = window.localStorage.getItem('language')
+  return stored === 'en' ? 'en' : 'sv'
 }
 
 const resolveDbhClass = (dbh?: number): number | null => {
@@ -205,7 +545,7 @@ const resolveLogVolume = (logEl: Element): number => {
 
 const ForestryHarvesterApp: React.FC = () => {
   const [stems, setStems] = useState<Stem[]>([])
-  const [status, setStatus] = useState('')
+  const [statusInfo, setStatusInfo] = useState<StatusInfo>(null)
   const [results, setResults] = useState<ResultRow[]>([])
   const [legacyPrices, setLegacyPrices] = useState<LegacyPriceEntry[]>(
     LEGACY_AVERAGE_VOLUMES.map((averageVolume) => ({ averageVolume, price: 0 })),
@@ -228,7 +568,28 @@ const ForestryHarvesterApp: React.FC = () => {
   const [showBulkPaste, setShowBulkPaste] = useState(false)
   const [bulkPriceText, setBulkPriceText] = useState('')
   const [hasUploaded, setHasUploaded] = useState(false)
+  const [language, setLanguage] = useState<Language>(() => getInitialLanguage())
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('language', language)
+  }, [language])
+
+  const t = translations[language]
+  const statusMessage = useMemo(() => {
+    if (!statusInfo) return ''
+    switch (statusInfo.kind) {
+      case 'filesSelected':
+        return t.status.filesSelected(statusInfo.count)
+      case 'parsed':
+        return t.status.parsed(statusInfo.stems, statusInfo.logs)
+      case 'noStems':
+        return t.status.noStems
+      default:
+        return ''
+    }
+  }, [statusInfo, t])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -390,7 +751,7 @@ const ForestryHarvesterApp: React.FC = () => {
 
   const processFiles = useCallback(
     async (selectedFiles: File[]) => {
-      setStatus(`${selectedFiles.length} files selected`)
+      setStatusInfo({ kind: 'filesSelected', count: selectedFiles.length })
 
       let allStems: Stem[] = []
       let totalLogCount = 0
@@ -407,14 +768,14 @@ const ForestryHarvesterApp: React.FC = () => {
 
       setStems(allStems)
       if (allStems.length > 0) {
-        setStatus(`Parsed ${allStems.length} stems, ${totalLogCount} logs`)
+        setStatusInfo({ kind: 'parsed', stems: allStems.length, logs: totalLogCount })
         setHasUploaded(true)
       } else {
-        setStatus('No stems detected in the uploaded files. Please verify the HPR file and try again.')
+        setStatusInfo({ kind: 'noStems' })
         setHasUploaded(false)
       }
     },
-    [parseHPRFile],
+    [parseHPRFile, t],
   )
 
   const handleFileUpload = useCallback(
@@ -568,7 +929,7 @@ const ForestryHarvesterApp: React.FC = () => {
 
   const handleReset = useCallback(() => {
     setStems([])
-    setStatus('')
+    setStatusInfo(null)
     setResults([])
     setOldModelSummary(null)
     setNewTotals(null)
@@ -752,15 +1113,37 @@ const ForestryHarvesterApp: React.FC = () => {
             alt="Södra logo"
             className="h-12 w-auto"
           />
-          {isAdminRoute ? (
-            <Button variant="outline" size="sm" onClick={() => navigate('/')}>
-              Back to calculator
-            </Button>
-          ) : (
-            <Button variant="outline" size="sm" onClick={() => navigate('/admin')}>
-              Open admin settings
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1 rounded-md border border-green-900/40 bg-background/60 p-1">
+              <Button
+                type="button"
+                size="sm"
+                variant={language === 'sv' ? 'default' : 'ghost'}
+                onClick={() => setLanguage('sv')}
+                aria-pressed={language === 'sv'}
+              >
+                {t.languageToggle.sv}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={language === 'en' ? 'default' : 'ghost'}
+                onClick={() => setLanguage('en')}
+                aria-pressed={language === 'en'}
+              >
+                {t.languageToggle.en}
+              </Button>
+            </div>
+            {isAdminRoute ? (
+              <Button variant="outline" size="sm" onClick={() => navigate('/')}>
+                {t.header.backToCalculator}
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin')}>
+                {t.header.openAdmin}
+              </Button>
+            )}
+          </div>
         </div>
 
         {isAdminRoute ? (
@@ -770,6 +1153,7 @@ const ForestryHarvesterApp: React.FC = () => {
             onReset={() => setSpeciesDivisors(normaliseDivisors(DEFAULT_SPECIES_DIVISORS))}
             constants={{ k1: params.k1, k2: params.k2, c11: params.c11, maxPerTreeTime: params.maxPerTreeTime }}
             onConstantChange={(key, value) => setParams((prev) => ({ ...prev, [key]: value }))}
+            language={language}
           />
         ) : (
           <div className="space-y-12">
@@ -777,8 +1161,8 @@ const ForestryHarvesterApp: React.FC = () => {
               <Card className="border border-green-900/70 bg-background/60 p-6">
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-lg font-semibold tracking-tight text-green-700">File Upload</h2>
-                    <p className="text-sm text-muted-foreground">Upload your HPR file</p>
+                    <h2 className="text-lg font-semibold tracking-tight text-green-700">{t.upload.title}</h2>
+                    <p className="text-sm text-muted-foreground">{t.upload.subtitle}</p>
                   </div>
                   <div
                     role="button"
@@ -796,11 +1180,11 @@ const ForestryHarvesterApp: React.FC = () => {
                   >
                     <Upload className="size-10 text-green-300" />
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-green-700">Drag and drop file here</p>
-                      <p className="text-xs text-muted-foreground">or</p>
+                      <p className="text-sm font-medium text-green-700">{t.upload.dragAndDrop}</p>
+                      <p className="text-xs text-muted-foreground">{t.upload.or}</p>
                     </div>
                     <Button type="button" variant="default" onClick={triggerFileDialog} className="bg-green-700 hover:bg-green-600">
-                      Browse files
+                      {t.upload.browse}
                     </Button>
                     <input
                       ref={fileInputRef}
@@ -812,31 +1196,29 @@ const ForestryHarvesterApp: React.FC = () => {
                     />
                   </div>
                   <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-                    <span>Accepted format: .hpr</span>
+                    <span>{t.upload.acceptedFormat}</span>
                     <Button onClick={handleReset} variant="outline" size="sm">
                       <X className="mr-2 size-4" />
-                      Reset
+                      {t.upload.reset}
                     </Button>
                   </div>
-                  {status ? <p className="text-xs text-muted-foreground">{status}</p> : null}
+                  {statusMessage ? <p className="text-xs text-muted-foreground">{statusMessage}</p> : null}
                 </div>
               </Card>
             ) : (
               <Card className="border border-green-900/70 bg-background/60 p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold tracking-tight text-green-700">File uploaded</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {status || 'Your HPR data has been loaded. You can upload another file at any time.'}
-                    </p>
+                    <h2 className="text-lg font-semibold tracking-tight text-green-700">{t.upload.fileUploadedTitle}</h2>
+                    <p className="text-sm text-muted-foreground">{statusMessage || t.upload.fileUploadedDescription}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => setHasUploaded(false)}>
-                      Upload another file
+                      {t.upload.uploadAnother}
                     </Button>
                     <Button variant="ghost" onClick={handleReset}>
                       <X className="mr-2 size-4" />
-                      Reset all
+                      {t.upload.resetAll}
                     </Button>
                   </div>
                 </div>
@@ -846,24 +1228,24 @@ const ForestryHarvesterApp: React.FC = () => {
             <Card className="bg-background/60 p-6 shadow-sm">
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-lg font-semibold tracking-tight text-green-700">Cost and performance settings</h2>
-                  <p className="text-sm text-muted-foreground">Adjust the rates used for both the old and new pricing models.</p>
+                  <h2 className="text-lg font-semibold tracking-tight text-green-700">{t.settings.title}</h2>
+                  <p className="text-sm text-muted-foreground">{t.settings.subtitle}</p>
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-2">
                   <div className="space-y-4 rounded-lg border border-green-900/30 bg-green-900/5 p-4">
                     <div>
                       <h3 className="text-sm font-semibold uppercase tracking-wide text-green-700">
-                        Harvesting calculation
+                        {t.settings.harvestingTitle}
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        Parameters used to determine the harvesting productivity and tariffs.
+                        {t.settings.harvestingDescription}
                       </p>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-1">
                       <div className="space-y-2">
                         <Label htmlFor="harvestingCostRate" className="text-xs uppercase tracking-wide text-green-700">
-                          Harvesting cost (kr/G15h)
+                          {t.settings.harvestingCost}
                         </Label>
                         <Input
                           id="harvestingCostRate"
@@ -881,16 +1263,16 @@ const ForestryHarvesterApp: React.FC = () => {
                   <div className="space-y-4 rounded-lg border border-green-900/30 bg-green-900/5 p-4">
                     <div>
                       <h3 className="text-sm font-semibold uppercase tracking-wide text-green-700">
-                        Forwarding calculation
+                        {t.settings.forwardingTitle}
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        Configure the forwarding rate inputs used in the cost projections.
+                        {t.settings.forwardingDescription}
                       </p>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2 sm:col-span-2">
                         <Label htmlFor="forwardingSK" className="text-xs uppercase tracking-wide text-green-700">
-                          Forwarding cost (kr/G15h)
+                          {t.settings.forwardingCost}
                         </Label>
                         <Input
                           id="forwardingSK"
@@ -904,7 +1286,7 @@ const ForestryHarvesterApp: React.FC = () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="skiddingDistanceSA" className="text-xs uppercase tracking-wide text-green-700">
-                          Skidding distance (m)
+                          {t.settings.skiddingDistance}
                         </Label>
                         <Input
                           id="skiddingDistanceSA"
@@ -918,7 +1300,7 @@ const ForestryHarvesterApp: React.FC = () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="standRemovalUT" className="text-xs uppercase tracking-wide text-green-700">
-                          Stand removal (m³fub/ha)
+                          {t.settings.standRemoval}
                         </Label>
                         <Input
                           id="standRemovalUT"
@@ -931,28 +1313,18 @@ const ForestryHarvesterApp: React.FC = () => {
                         />
                       </div>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Advanced harvesting and forwarding constants, including the max per-tree time and k1, k2, c11, can be
-                      adjusted from the admin panel.
-                    </p>
+                    <p className="text-[11px] text-muted-foreground">{t.settings.constantsNote}</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-base font-semibold text-green-700">Input base price kr/m³fub</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Enter the legacy price list based on average stem volume.
-                      </p>
+                      <h3 className="text-base font-semibold text-green-700">{t.legacyPricing.title}</h3>
+                      <p className="text-xs text-muted-foreground">{t.legacyPricing.description}</p>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePastePrices}
-                    >
-                      Paste prices
+                    <Button type="button" variant="outline" size="sm" onClick={handlePastePrices}>
+                      {t.legacyPricing.pasteButton}
                     </Button>
                   </div>
 
@@ -961,17 +1333,13 @@ const ForestryHarvesterApp: React.FC = () => {
                       <textarea
                         value={bulkPriceText}
                         onChange={(event) => setBulkPriceText(event.target.value)}
-                        placeholder={
-                          'Paste numbers from a spreadsheet. Example:\n0.20\t110\n0.25\t115'
-                        }
+                        placeholder={t.legacyPricing.pastePlaceholder}
                         className="h-28 w-full resize-y rounded-md border border-border/40 bg-background/70 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-700"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Tip: copy both columns (average stem and price) or a single column of prices. Values are matched in order when no stem is provided.
-                      </p>
+                      <p className="text-xs text-muted-foreground">{t.legacyPricing.pasteTip}</p>
                       <div className="flex items-center justify-end gap-2">
                         <Button type="button" variant="ghost" size="sm" onClick={handleCancelBulkPricing}>
-                          Cancel
+                          {t.legacyPricing.cancel}
                         </Button>
                         <Button
                           type="button"
@@ -980,7 +1348,7 @@ const ForestryHarvesterApp: React.FC = () => {
                           className="bg-green-700 hover:bg-green-600"
                           disabled={!bulkPriceText.trim()}
                         >
-                          Apply paste
+                          {t.legacyPricing.apply}
                         </Button>
                       </div>
                     </div>
@@ -990,8 +1358,8 @@ const ForestryHarvesterApp: React.FC = () => {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-green-900/20 text-green-100 text-sm">
-                          <TableHead className="py-2">Average stem (m³)</TableHead>
-                          <TableHead className="py-2">Base price (kr/m³fub)</TableHead>
+                          <TableHead className="py-2">{t.legacyPricing.averageStem}</TableHead>
+                          <TableHead className="py-2">{t.legacyPricing.basePrice}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1009,7 +1377,7 @@ const ForestryHarvesterApp: React.FC = () => {
                                     prev.map((pricing, i) => (i === index ? { ...pricing, price: newPrice } : pricing)),
                                   )
                                 }}
-                                placeholder="e.g. 110"
+                                placeholder={t.legacyPricing.pricePlaceholder}
                                 className="bg-background/60"
                               />
                             </TableCell>
@@ -1022,7 +1390,7 @@ const ForestryHarvesterApp: React.FC = () => {
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <Button onClick={calculateResults} disabled={stems.length === 0} className="bg-green-700 hover:bg-green-600">
-                    Calculate
+                    {t.actions.calculate}
                   </Button>
                 </div>
               </div>
@@ -1031,14 +1399,14 @@ const ForestryHarvesterApp: React.FC = () => {
             <Card className="bg-background/60 p-6 shadow-sm">
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-lg font-semibold tracking-tight text-green-700">Price per DBH</h2>
-                  <p className="text-sm text-muted-foreground">Harvesting rate divided by your divisor table.</p>
+                  <h2 className="text-lg font-semibold tracking-tight text-green-700">{t.tables.pricePerDbhTitle}</h2>
+                  <p className="text-sm text-muted-foreground">{t.tables.pricePerDbhSubtitle}</p>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-border/40">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-emerald-500/10 text-emerald-100">
-                        <TableHead>DBH</TableHead>
+                        <TableHead>{t.tables.dbh}</TableHead>
                         {DBH_CLASSES.map((dbh) => (
                           <TableHead
                             key={dbh}
@@ -1051,7 +1419,7 @@ const ForestryHarvesterApp: React.FC = () => {
                     <TableBody>
                       {SUPPORTED_SPECIES.map((species) => (
                         <TableRow key={species}>
-                          <TableCell className="font-semibold text-green-700">{SPECIES_LABELS[species]}</TableCell>
+                          <TableCell className="font-semibold text-green-700">{SPECIES_LABELS[language][species]}</TableCell>
                           {DBH_CLASSES.map((dbh, index) => {
                             const value = speciesPriceMatrix[species][index] ?? 0
                             const display = value > 0 ? value.toFixed(1) : '–'
@@ -1077,20 +1445,18 @@ const ForestryHarvesterApp: React.FC = () => {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold tracking-tight text-green-700">Harvesting Price calculation</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Calculated volume, price, and value per DBH class and species using your uploaded data.
-                    </p>
+                    <h2 className="text-lg font-semibold tracking-tight text-green-700">{t.tables.harvestingCalculationTitle}</h2>
+                    <p className="text-sm text-muted-foreground">{t.tables.harvestingCalculationSubtitle}</p>
                   </div>
                   <Button onClick={downloadResults} variant="outline" disabled={results.length === 0}>
                     <Download className="mr-2 size-4" />
-                    Export CSV
+                    {t.actions.exportCsv}
                   </Button>
                 </div>
 
                 {results.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-emerald-500/40 p-6 text-center text-sm text-muted-foreground">
-                    Upload an HPR file and run Calculate to see per-species pricing.
+                    {t.tables.emptyState}
                   </div>
                 ) : (
                   <div className="space-y-8">
@@ -1098,25 +1464,25 @@ const ForestryHarvesterApp: React.FC = () => {
                       const speciesRows = resultsBySpecies[species]
                       return (
                         <div key={species} className="space-y-3">
-                    <h3 className="flex items-center gap-2 text-base font-semibold text-green-700">
-                            {SPECIES_LABELS[species]}
+                          <h3 className="flex items-center gap-2 text-base font-semibold text-green-700">
+                            {SPECIES_LABELS[language][species]}
                           </h3>
                           <div className="overflow-x-auto rounded-lg border border-border/40">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-emerald-500/10 text-emerald-100">
-                                  <TableHead>DBH</TableHead>
-                                  <TableHead>Stems (st)</TableHead>
-                                  <TableHead>Volume (m³)</TableHead>
-                                  <TableHead>Price (kr/m³)</TableHead>
-                                  <TableHead>Value (kr)</TableHead>
+                                  <TableHead>{t.tables.dbh}</TableHead>
+                                  <TableHead>{t.tables.stems}</TableHead>
+                                  <TableHead>{t.tables.volume}</TableHead>
+                                  <TableHead>{t.tables.price}</TableHead>
+                                  <TableHead>{t.tables.value}</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {speciesRows.length === 0 ? (
                                   <TableRow>
                                     <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                                      No stems matched this species in the uploaded data.
+                                      {t.tables.noStemsMessage}
                                     </TableCell>
                                   </TableRow>
                                 ) : (
@@ -1131,7 +1497,7 @@ const ForestryHarvesterApp: React.FC = () => {
                                       </TableRow>
                                     ))}
                                     <TableRow className="bg-green-900/15 font-semibold">
-                                      <TableCell>Total</TableCell>
+                                      <TableCell>{t.tables.total}</TableCell>
                                       <TableCell>{speciesSummaries[species].stems}</TableCell>
                                       <TableCell>{speciesSummaries[species].volume.toFixed(3)}</TableCell>
                                       <TableCell />
@@ -1152,54 +1518,57 @@ const ForestryHarvesterApp: React.FC = () => {
                   <div className="grid gap-4 rounded-lg border border-border/40 p-4 md:grid-cols-2">
                     <div className="flex h-full flex-col gap-4 rounded-lg border border-green-900/40 bg-background/70 p-4">
                       <div>
-                        <h3 className="text-sm uppercase tracking-wide text-green-700">New model · per-bin pricing</h3>
-                        <p className="text-xs text-muted-foreground">Tariffs calculated from DBH + species bins.</p>
+                        <h3 className="text-sm uppercase tracking-wide text-green-700">{t.newModel.title}</h3>
+                        <p className="text-xs text-muted-foreground">{t.newModel.subtitle}</p>
                       </div>
                       <div className="grid gap-3 text-sm">
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Total stems</span>
+                          <span className="text-muted-foreground">{t.newModel.totalStems}</span>
                           <span className="font-semibold text-green-800">{newTotals.totalStems}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Total volume</span>
+                          <span className="text-muted-foreground">{t.newModel.totalVolume}</span>
                           <span className="font-semibold text-green-800">{newTotals.totalVolume.toFixed(3)} m³</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Weighted price</span>
+                          <span className="text-muted-foreground">{t.newModel.weightedPrice}</span>
                           <span className="font-semibold text-green-800">{newTotals.averagePrice.toFixed(2)} kr/m³</span>
                         </div>
                       </div>
                       <div className="rounded-lg border border-green-700/40 bg-green-900/20 px-4 py-3">
-                        <p className="text-[11px] uppercase tracking-wide text-green-600 text-center">Projected value</p>
+                        <p className="text-[11px] uppercase tracking-wide text-green-600 text-center">{t.newModel.projectedValue}</p>
                         <dl className="mt-3 space-y-2 text-sm">
                           <div className="flex items-center justify-between text-green-800">
-                            <dt className="text-muted-foreground">Harvesting cost</dt>
+                            <dt className="text-muted-foreground">{t.newModel.harvestingCost}</dt>
                             <dd className="font-semibold">{newTotals.totalPrice.toFixed(2)} kr</dd>
                           </div>
                           <div className="flex items-center justify-between text-green-800">
-                            <dt className="text-muted-foreground">Forwarding cost</dt>
+                            <dt className="text-muted-foreground">{t.newModel.forwardingCost}</dt>
                             <dd className="font-semibold">{newTotals.totalForwardingCost.toFixed(2)} kr</dd>
                           </div>
                         </dl>
                         <div className="mt-3 rounded-md border border-green-700/30 bg-green-900/10 px-3 py-2 text-center">
-                          <p className="text-[11px] uppercase tracking-wide text-green-600">Total</p>
+                          <p className="text-[11px] uppercase tracking-wide text-green-600">{t.newModel.combinedTotal}</p>
                           <p className="text-xl font-semibold text-green-700">{newTotals.combinedTotal.toFixed(2)} kr</p>
                         </div>
                         <p className="mt-2 text-center text-[11px] text-muted-foreground">
-                          Forwarding: {newTotals.forwardingCostPerCubicMeter.toFixed(2)} kr/m³
+                          {t.newModel.forwardingRate} {newTotals.forwardingCostPerCubicMeter.toFixed(2)} kr/m³
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-green-700">Value by species</p>
+                        <p className="text-xs uppercase tracking-wide text-green-700">{t.newModel.valueBySpecies}</p>
                         <div className="mt-2 grid gap-3 sm:grid-cols-3">
                           {SUPPORTED_SPECIES.map((species) => (
                             <div key={`${species}-summary`} className="rounded-md border border-green-900/30 bg-green-900/10 p-3 text-center">
-                              <p className="text-[11px] uppercase tracking-wide text-green-600">{SPECIES_LABELS[species]}</p>
+                              <p className="text-[11px] uppercase tracking-wide text-green-600">{SPECIES_LABELS[language][species]}</p>
                               <p className="text-lg font-semibold text-green-700">
                                 {speciesSummaries[species].totalPrice.toFixed(2)} kr
                               </p>
                               <p className="text-[11px] text-muted-foreground">
-                                {speciesSummaries[species].stems} stems · {speciesSummaries[species].volume.toFixed(3)} m³
+                                {t.newModel.speciesSummary(
+                                  speciesSummaries[species].stems,
+                                  speciesSummaries[species].volume,
+                                )}
                               </p>
                             </div>
                           ))}
@@ -1209,31 +1578,32 @@ const ForestryHarvesterApp: React.FC = () => {
 
                     <div className="flex h-full flex-col gap-4 rounded-lg border border-green-900/40 bg-background/70 p-4">
                       <div>
-                        <h3 className="text-sm uppercase tracking-wide text-green-700">Legacy model · single bin</h3>
-                        <p className="text-xs text-muted-foreground">
-                          Entire stand priced with the dataset average stem.
-                        </p>
+                        <h3 className="text-sm uppercase tracking-wide text-green-700">{t.legacyModel.title}</h3>
+                        <p className="text-xs text-muted-foreground">{t.legacyModel.subtitle}</p>
                       </div>
                       <div className="grid gap-3 text-sm">
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Average stem volume</span>
+                          <span className="text-muted-foreground">{t.legacyModel.averageStemVolume}</span>
                           <span className="font-semibold text-green-800">{oldModelSummary.averageVolume.toFixed(3)} m³</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Price for average stem</span>
+                          <span className="text-muted-foreground">{t.legacyModel.priceForAverageStem}</span>
                           <span className="font-semibold text-green-800">{oldModelSummary.averagePrice.toFixed(2)} kr/m³</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Total volume</span>
+                          <span className="text-muted-foreground">{t.legacyModel.totalVolume}</span>
                           <span className="font-semibold text-green-800">{oldModelSummary.totalVolume.toFixed(3)} m³</span>
                         </div>
                       </div>
                       <div className="rounded-lg border border-green-700/40 bg-green-900/20 px-4 py-3 text-center">
-                        <p className="text-[11px] uppercase tracking-wide text-green-600">Legacy payout</p>
+                        <p className="text-[11px] uppercase tracking-wide text-green-600">{t.legacyModel.legacyPayout}</p>
                         <p className="text-2xl font-semibold text-green-700">{oldModelSummary.totalPrice.toFixed(2)} kr</p>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Base price entries set: {legacyPrices.filter((entry) => entry.price > 0).length}/{legacyPrices.length}
+                        {t.legacyModel.basePriceEntries(
+                          legacyPrices.filter((entry) => entry.price > 0).length,
+                          legacyPrices.length,
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1254,10 +1624,12 @@ interface AdminPageProps {
   onReset: () => void
   constants: CalculationConstants
   onConstantChange: (key: keyof CalculationConstants, value: number) => void
+  language: Language
 }
 
-const AdminPage: React.FC<AdminPageProps> = ({ divisors, onChange, onReset, constants, onConstantChange }) => {
+const AdminPage: React.FC<AdminPageProps> = ({ divisors, onChange, onReset, constants, onConstantChange, language }) => {
   const [showConstants, setShowConstants] = useState(false)
+  const t = translations[language]
 
   const updateConstant = (key: keyof CalculationConstants, raw: string) => {
     const parsed = Number.parseFloat(raw)
@@ -1287,17 +1659,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ divisors, onChange, onReset, cons
     <Card className="p-6 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Admin: species divisor table</h2>
-          <p className="text-sm text-muted-foreground">
-            Adjust the divisor used to convert the harvesting cost rate into SEK/m³ for each species and DBH class. Leave blank to disable pricing for a class.
-          </p>
+          <h2 className="text-xl font-semibold">{t.admin.title}</h2>
+          <p className="text-sm text-muted-foreground">{t.admin.description}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => setShowConstants((prev) => !prev)}>
-            {showConstants ? 'Hide constants' : 'Show constants'}
+            {showConstants ? t.admin.hideConstants : t.admin.showConstants}
           </Button>
           <Button variant="outline" size="sm" onClick={onReset}>
-            Reset to defaults
+            {t.admin.resetDefaults}
           </Button>
         </div>
       </div>
@@ -1305,15 +1675,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ divisors, onChange, onReset, cons
       {showConstants ? (
         <div className="space-y-4 rounded-lg border border-green-900/30 bg-green-900/5 p-4">
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-green-700">Advanced constants</h3>
-            <p className="text-xs text-muted-foreground">
-              Coefficients that influence the harvesting cap and forwarding cost calculations. Adjust with care.
-            </p>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-green-700">{t.admin.advancedConstants}</h3>
+            <p className="text-xs text-muted-foreground">{t.admin.advancedConstantsDescription}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="constant-maxPerTreeTime" className="text-xs uppercase tracking-wide text-green-700">
-                Max per-tree time (s)
+                {t.admin.maxPerTreeTime}
               </Label>
               <Input
                 id="constant-maxPerTreeTime"
@@ -1371,9 +1739,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ divisors, onChange, onReset, cons
           <TableHeader>
             <TableRow>
               <TableHead>DBH (mm)</TableHead>
-              <TableHead>Tall divisor</TableHead>
-              <TableHead>Gran divisor</TableHead>
-              <TableHead>Löv divisor</TableHead>
+              <TableHead>{t.admin.tallDivisor}</TableHead>
+              <TableHead>{t.admin.granDivisor}</TableHead>
+              <TableHead>{t.admin.lovDivisor}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
