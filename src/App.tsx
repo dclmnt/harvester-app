@@ -111,7 +111,7 @@ const DBH_CLASSES = [
 const DEFAULT_SPECIES_DIVISORS: SpeciesDivisors = {
   Tall: [2.5, 3.8, 6.2, 9.2, 12.7, 16.8, 21.1, 25.3, 29.6, 33.8, 38.1, 42, 46.6, 49.7, 53.4, 55.4, 57.2, 56.9, 60.1, 57.6, 54.7, 57.8, 54.8, 54, 57, 57.8],
   Gran: [3.4, 5.1, 7.6, 10.7, 14.1, 17.8, 21.8, 25.7, 30.3, 34.7, 38.9, 43.2, 47, 49.5, 51.8, 53.1, 54.1, 53.9, 54.2, 52.7, 52.6, 51.8, 50.4, 54.1, 48.4, 46.8],
-  Löv: [2.8, 4.1, 6.1, 8.3, 11.1, 14, 16.7, 20.6, 23.2, 26.2, 28.3, 31, 33.9, 34.1, 36.1, 38.9, 39.6, 38.3, 39, 42.4, 41, null, null, null, null, null],
+  Löv: [2.8, 4.1, 6.1, 8.3, 11.1, 14, 16.7, 20.6, 23.2, 26.2, 28.3, 31, 33.9, 34.1, 36.1, 38.9, 39.6, 38.3, 39, 42.4, 41, 41, 41, 41, 41, 41],
 }
 
 const SUPPORTED_SPECIES: SpeciesCategory[] = ['Tall', 'Gran', 'Löv']
@@ -354,8 +354,8 @@ const translations: Record<Language, {
       reset: 'Återställ',
       fileUploadedTitle: 'Fil uppladdad',
       fileUploadedDescription: 'Din HPR-data har lästs in. Du kan ladda upp en ny fil när som helst.',
-      uploadAnother: 'Ladda upp en ny fil',
-      resetAll: 'Återställ allt',
+      uploadAnother: 'Ladda upp ny fil',
+      resetAll: 'Återställ',
     },
     status: {
       filesSelected: (count) => `${count} filer valda`,
