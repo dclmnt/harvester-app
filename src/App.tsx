@@ -244,8 +244,8 @@ const translations: Record<Language, {
       acceptedFormat: 'Accepted format: .hpr',
       reset: 'Reset',
       fileUploadedTitle: 'File uploaded',
-      fileUploadedDescription: 'Your HPR data has been loaded. You can upload another file at any time.',
-      uploadAnother: 'Upload another file',
+      fileUploadedDescription: 'Your HPR data has been loaded. Additional files will be combined into the same result.',
+      uploadAnother: 'Add more files',
       resetAll: 'Reset all',
     },
     status: {
@@ -353,8 +353,8 @@ const translations: Record<Language, {
       acceptedFormat: 'Tillåtet format: .hpr',
       reset: 'Återställ',
       fileUploadedTitle: 'Fil uppladdad',
-      fileUploadedDescription: 'Din HPR-data har lästs in. Du kan ladda upp en ny fil när som helst.',
-      uploadAnother: 'Ladda upp ny fil',
+      fileUploadedDescription: 'Din HPR-data har lästs in. Ytterligare filer läggs till i samma resultat.',
+      uploadAnother: 'Lägg till fler filer',
       resetAll: 'Återställ',
     },
     status: {
@@ -546,6 +546,7 @@ const resolveLogVolume = (logEl: Element): number => {
 const ForestryHarvesterApp: React.FC = () => {
   const [stems, setStems] = useState<Stem[]>([])
   const [statusInfo, setStatusInfo] = useState<StatusInfo>(null)
+  const [totalLogCount, setTotalLogCount] = useState(0)
   const [results, setResults] = useState<ResultRow[]>([])
   const [legacyPrices, setLegacyPrices] = useState<LegacyPriceEntry[]>(
     LEGACY_AVERAGE_VOLUMES.map((averageVolume) => ({ averageVolume, price: 0 })),
@@ -568,6 +569,7 @@ const ForestryHarvesterApp: React.FC = () => {
   const [showBulkPaste, setShowBulkPaste] = useState(false)
   const [bulkPriceText, setBulkPriceText] = useState('')
   const [hasUploaded, setHasUploaded] = useState(false)
+  const [shouldAppend, setShouldAppend] = useState(false)
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage())
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -750,43 +752,52 @@ const ForestryHarvesterApp: React.FC = () => {
   }, [])
 
   const processFiles = useCallback(
-    async (selectedFiles: File[]) => {
+    async (selectedFiles: File[], options: { append?: boolean } = {}) => {
+      const append = options.append ?? false
+
+      if (selectedFiles.length === 0) {
+        return
+      }
+
       setStatusInfo({ kind: 'filesSelected', count: selectedFiles.length })
 
-      let allStems: Stem[] = []
-      let totalLogCount = 0
+      let combinedStems: Stem[] = append ? [...stems] : []
+      let combinedLogCount = append ? totalLogCount : 0
 
       for (const file of selectedFiles) {
         try {
           const { stems: fileStems, logCount } = await parseHPRFile(file)
-          allStems = [...allStems, ...fileStems]
-          totalLogCount += logCount
+          combinedStems = [...combinedStems, ...fileStems]
+          combinedLogCount += logCount
         } catch (error) {
           console.error(`Error parsing file ${file.name}:`, error)
         }
       }
 
-      setStems(allStems)
-      if (allStems.length > 0) {
-        setStatusInfo({ kind: 'parsed', stems: allStems.length, logs: totalLogCount })
+      setStems(combinedStems)
+      setTotalLogCount(combinedLogCount)
+      if (combinedStems.length > 0) {
+        setStatusInfo({ kind: 'parsed', stems: combinedStems.length, logs: combinedLogCount })
         setHasUploaded(true)
+        setShouldAppend(false)
       } else {
         setStatusInfo({ kind: 'noStems' })
         setHasUploaded(false)
       }
     },
-    [parseHPRFile, t],
+    [parseHPRFile, stems, totalLogCount],
   )
 
   const handleFileUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFiles = Array.from(event.target.files ?? [])
-      await processFiles(selectedFiles)
+      await processFiles(selectedFiles, { append: shouldAppend })
+      setShouldAppend(false)
       if (event.target) {
         event.target.value = ''
       }
     },
-    [processFiles],
+    [processFiles, shouldAppend],
   )
 
   const handleFileDrop = useCallback(
@@ -796,10 +807,11 @@ const ForestryHarvesterApp: React.FC = () => {
         /\.hpr$/i.test(file.name) || /\.zip$/i.test(file.name),
       )
       if (droppedFiles.length > 0) {
-        await processFiles(droppedFiles)
+        await processFiles(droppedFiles, { append: shouldAppend })
+        setShouldAppend(false)
       }
     },
-    [processFiles],
+    [processFiles, shouldAppend],
   )
 
   const handleDragOver = useCallback((event: React.DragEvent<HTMLLabelElement | HTMLDivElement>) => {
@@ -933,9 +945,16 @@ const ForestryHarvesterApp: React.FC = () => {
     setResults([])
     setOldModelSummary(null)
     setNewTotals(null)
+    setTotalLogCount(0)
+    setShouldAppend(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+    setHasUploaded(false)
+  }, [])
+
+  const handleAddMoreFiles = useCallback(() => {
+    setShouldAppend(true)
     setHasUploaded(false)
   }, [])
 
@@ -1213,7 +1232,7 @@ const ForestryHarvesterApp: React.FC = () => {
                     <p className="text-sm text-muted-foreground">{statusMessage || t.upload.fileUploadedDescription}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => setHasUploaded(false)}>
+                    <Button variant="outline" onClick={handleAddMoreFiles}>
                       {t.upload.uploadAnother}
                     </Button>
                     <Button variant="ghost" onClick={handleReset}>
