@@ -176,7 +176,7 @@ const translations: Record<Language, {
   }
   actions: {
     calculate: string
-    exportCsv: string
+    exportSpreadsheet: string
   }
   tables: {
     pricePerDbhTitle: string
@@ -184,6 +184,7 @@ const translations: Record<Language, {
     harvestingCalculationTitle: string
     harvestingCalculationSubtitle: string
     emptyState: string
+    species: string
     dbh: string
     stems: string
     volume: string
@@ -191,6 +192,7 @@ const translations: Record<Language, {
     value: string
     noStemsMessage: string
     total: string
+    allResultsSheet: string
   }
   newModel: {
     title: string
@@ -282,7 +284,7 @@ const translations: Record<Language, {
     },
     actions: {
       calculate: 'Calculate',
-      exportCsv: 'Export CSV',
+      exportSpreadsheet: 'Export Excel',
     },
     tables: {
       pricePerDbhTitle: 'Price per DBH',
@@ -291,6 +293,7 @@ const translations: Record<Language, {
       harvestingCalculationSubtitle:
         'Calculated volume, price, and value per DBH class and species using your uploaded data.',
       emptyState: 'Upload an HPR file and run Calculate to see per-species pricing.',
+      species: 'Species',
       dbh: 'DBH',
       stems: 'Stems (st)',
       volume: 'Volume (m³)',
@@ -298,6 +301,7 @@ const translations: Record<Language, {
       value: 'Value (kr)',
       noStemsMessage: 'No stems matched this species in the uploaded data.',
       total: 'Total',
+      allResultsSheet: 'All results',
     },
     newModel: {
       title: 'New model · per-bin pricing',
@@ -391,7 +395,7 @@ const translations: Record<Language, {
     },
     actions: {
       calculate: 'Beräkna',
-      exportCsv: 'Exportera CSV',
+      exportSpreadsheet: 'Exportera Excel',
     },
     tables: {
       pricePerDbhTitle: 'Pris per DBH',
@@ -400,6 +404,7 @@ const translations: Record<Language, {
       harvestingCalculationSubtitle:
         'Beräknad volym, pris och värde per DBH-klass och trädslag baserat på din uppladdade data.',
       emptyState: 'Ladda upp en HPR-fil och kör Beräkna för att se priser per trädslag.',
+      species: 'Trädslag',
       dbh: 'DBH',
       stems: 'Stammar (st)',
       volume: 'Volym (m³)',
@@ -407,6 +412,7 @@ const translations: Record<Language, {
       value: 'Värde (kr)',
       noStemsMessage: 'Inga stammar matchade detta trädslag i den uppladdade datan.',
       total: 'Totalt',
+      allResultsSheet: 'Alla resultat',
     },
     newModel: {
       title: 'Ny modell · pris per klass',
@@ -1106,22 +1112,106 @@ const ForestryHarvesterApp: React.FC = () => {
   const downloadResults = useCallback(() => {
     if (results.length === 0) return
 
-    const csvContent = [
-      'species,dbh_mm,stems,total_volume_m3,price_sek_m3,total_price_sek',
-      ...results.map(
-        (row) =>
-          `${row.species},${row.dbhClass},${row.stems},${row.totalVolume.toFixed(10)},${row.pricePerCubicMeter.toFixed(2)},${row.totalPrice.toFixed(2)}`,
-      ),
-    ].join('\n')
+    const escapeXml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;')
 
-    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const createCell = (value: string | number | null, type: 'String' | 'Number' = 'String') => {
+      if (value === null || value === undefined || value === '') {
+        return '<Cell/>'
+      }
+      if (type === 'Number') {
+        return `<Cell><Data ss:Type="Number">${value}</Data></Cell>`
+      }
+      return `<Cell><Data ss:Type="String">${escapeXml(String(value))}</Data></Cell>`
+    }
+
+    const createRow = (cells: Array<{ value: string | number | null; type?: 'String' | 'Number' }>) =>
+      `<Row>${cells.map((cell) => createCell(cell.value, cell.type)).join('')}</Row>`
+
+    const buildWorksheet = (name: string, rows: string[]) =>
+      `<Worksheet ss:Name="${escapeXml(name)}"><Table>${rows.join('')}</Table></Worksheet>`
+
+    const headerCells = [
+      { value: t.tables.species },
+      { value: t.tables.dbh },
+      { value: t.tables.stems },
+      { value: t.tables.volume },
+      { value: t.tables.price },
+      { value: t.tables.value },
+    ]
+
+    const formatRow = (row: ResultRow) => [
+      { value: SPECIES_LABELS[language][row.species] },
+      { value: row.dbhClass, type: 'Number' as const },
+      { value: row.stems, type: 'Number' as const },
+      { value: Number(row.totalVolume.toFixed(3)), type: 'Number' as const },
+      { value: Number(row.pricePerCubicMeter.toFixed(2)), type: 'Number' as const },
+      { value: Number(row.totalPrice.toFixed(2)), type: 'Number' as const },
+    ]
+
+    const totals = results.reduce(
+      (acc, row) => {
+        acc.stems += row.stems
+        acc.volume += row.totalVolume
+        acc.totalPrice += row.totalPrice
+        return acc
+      },
+      { stems: 0, volume: 0, totalPrice: 0 },
+    )
+
+    const allWorksheetRows = [
+      createRow(headerCells),
+      ...results.map((row) => createRow(formatRow(row))),
+      createRow([
+        { value: t.tables.total },
+        { value: null },
+        { value: totals.stems, type: 'Number' },
+        { value: Number(totals.volume.toFixed(3)), type: 'Number' },
+        { value: null },
+        { value: Number(totals.totalPrice.toFixed(2)), type: 'Number' },
+      ]),
+    ]
+
+    const worksheets: string[] = [buildWorksheet(t.tables.allResultsSheet, allWorksheetRows)]
+
+    SUPPORTED_SPECIES.forEach((species) => {
+      const rows = resultsBySpecies[species]
+      if (rows.length === 0) return
+
+      const summary = speciesSummaries[species]
+      const worksheetRows = [
+        createRow(headerCells),
+        ...rows.map((row) => createRow(formatRow(row))),
+        createRow([
+          { value: t.tables.total },
+          { value: null },
+          { value: summary.stems, type: 'Number' },
+          { value: Number(summary.volume.toFixed(3)), type: 'Number' },
+          { value: null },
+          { value: Number(summary.totalPrice.toFixed(2)), type: 'Number' },
+        ]),
+      ]
+
+      worksheets.push(buildWorksheet(SPECIES_LABELS[language][species], worksheetRows))
+    })
+
+    const workbookXml = `<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">${worksheets.join('')}</Workbook>`
+
+    const blob = new Blob([workbookXml], {
+      type: 'application/vnd.ms-excel',
+    })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = 'hpr_class_costs.csv'
+    anchor.download = 'hpr_class_costs.xls'
     anchor.click()
     URL.revokeObjectURL(url)
-  }, [results])
+  }, [language, results, resultsBySpecies, speciesSummaries, t])
 
   return (
     <div className="min-h-screen bg-background text-foreground p-6">
@@ -1469,7 +1559,7 @@ const ForestryHarvesterApp: React.FC = () => {
                   </div>
                   <Button onClick={downloadResults} variant="outline" disabled={results.length === 0}>
                     <Download className="mr-2 size-4" />
-                    {t.actions.exportCsv}
+                    {t.actions.exportSpreadsheet}
                   </Button>
                 </div>
 
