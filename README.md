@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# Harvester App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A forestry pricing assistant that ingests harvester production reports (HPR files), groups stems by diameter (DBH) and species, and compares your legacy single-bin pricing against a modern per-bin model. The interface is built with React, TypeScript, Vite, and Tailwind CSS for fast iteration in the field.
 
-Currently, two official plugins are available:
+## How the app works
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. **Upload HPR data** – Drag and drop or browse for one or more `.hpr` or `.zip` files. The parser extracts stems, logs, diameter classes, and species information, automatically combining multiple uploads into a single dataset.
+2. **Tune operational inputs** – Adjust harvesting and forwarding rates, skidding distance, stand removal, and advanced constants (k1, k2, c11, max per-tree time) to reflect the stand and machine configuration.
+3. **Maintain price lists** – Enter or paste the legacy price table based on average stem volume and fine-tune the divisor table per species/DBH class in the admin view.
+4. **Analyse results** – Run the calculator to see volume, price, and value per species and DBH class, compare totals between the new per-bin model and the legacy model, and export the results to Excel for sharing with stakeholders.
 
-## React Compiler
+## Language support
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- The interface ships with **Swedish (default)** and **English** translations. Use the toggle in the header to switch languages instantly.
+- All domain-specific forestry terminology used in the UI has been crafted by the team to match Scandinavian harvesting practices.
 
-## Expanding the ESLint configuration
+## Getting started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
+- Node.js 18 or later
+- npm 9+
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Installation
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev
 ```
+Open the local URL printed in the terminal (default `http://localhost:5173`) to use the app.
+
+### Production build
+
+```bash
+npm run build
+npm run preview
+```
+
+## Tech stack
+
+- React + TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui component primitives
+- Vercel Analytics
+
+## Ownership and project background
+
+Harvester App and all language assets within the interface are owned by the creators listed below. The application was developed as part of a project at **Linnaeus University**.
+
+## Creators
+
+- [Daniel Clemente](https://www.linkedin.com/in/danielbengevenga/)
+- [Nadia Zalika](https://www.linkedin.com/in/nadia-zalika/)
+- [Daniella Lundqvist](https://www.linkedin.com/in/daniella-lundqvist-859379178/)
+
+The team retains full ownership of the application and its forestry terminology.

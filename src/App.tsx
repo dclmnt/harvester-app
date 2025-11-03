@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Analytics } from '@vercel/analytics/react'
-import { Download, Menu, Upload, X } from 'lucide-react'
+import { Download, Linkedin, Menu, Upload, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -237,6 +237,12 @@ const translations: Record<Language, {
     granDivisor: string
     lovDivisor: string
   }
+  footer: {
+    ownership: string
+    project: string
+    createdBy: string
+    viewProfile: string
+  }
 }> = {
   en: {
     languageToggle: { sv: 'Swedish', en: 'English' },
@@ -354,6 +360,12 @@ const translations: Record<Language, {
       tallDivisor: 'Pine divisor',
       granDivisor: 'Spruce divisor',
       lovDivisor: 'Broadleaf divisor',
+    },
+    footer: {
+      ownership: 'Harvester App and all associated language assets are owned and maintained by the creators listed below.',
+      project: 'Built as part of a project at Linnaeus University.',
+      createdBy: 'Created by',
+      viewProfile: 'LinkedIn profile',
     },
   },
   sv: {
@@ -473,8 +485,20 @@ const translations: Record<Language, {
       granDivisor: 'Gran-divisor',
       lovDivisor: 'Löv-divisor',
     },
+    footer: {
+      ownership: 'Harvester App och all tillhörande terminologi ägs av skaparna nedan.',
+      project: 'Utvecklad inom ett projekt vid Linnéuniversitetet.',
+      createdBy: 'Skapad av',
+      viewProfile: 'LinkedIn-profil',
+    },
   },
 }
+
+const TEAM_MEMBERS = [
+  { name: 'Daniel Clemente', linkedin: 'https://www.linkedin.com/in/danielbengevenga/' },
+  { name: 'Nadia Zalika', linkedin: 'https://www.linkedin.com/in/nadia-zalika/' },
+  { name: 'Daniella Lundqvist', linkedin: 'https://www.linkedin.com/in/daniella-lundqvist-859379178/' },
+] as const
 
 const getInitialLanguage = (): Language => {
   if (typeof window === 'undefined') return 'sv'
@@ -1831,6 +1855,31 @@ const ForestryHarvesterApp: React.FC = () => {
         )}
           </main>
         </div>
+        <footer className="mt-10 border-t border-green-900/20 bg-background/80">
+          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-6 text-sm text-muted-foreground lg:px-8">
+            <p>{t.footer.ownership}</p>
+            <p>{t.footer.project}</p>
+            <div>
+              <p className="font-semibold uppercase tracking-wide text-green-700">{t.footer.createdBy}</p>
+              <ul className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                {TEAM_MEMBERS.map((member) => (
+                  <li key={member.name} className="flex items-center gap-2">
+                    <span className="font-medium text-foreground">{member.name}</span>
+                    <a
+                      href={member.linkedin}
+                      className="inline-flex items-center text-green-700 transition hover:text-green-600"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      <Linkedin aria-hidden="true" className="h-4 w-4" />
+                      <span className="sr-only">{t.footer.viewProfile}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </footer>
       </div>
       <Analytics />
     </div>
