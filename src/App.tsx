@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Analytics } from '@vercel/analytics/react'
-import { ChevronLeft, Download, Menu, Upload, X } from 'lucide-react'
+import { Download, Menu, Upload, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -628,25 +628,6 @@ const ForestryHarvesterApp: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const mediaQuery = window.matchMedia('(min-width: 768px)')
-    const listener = (event: MediaQueryListEvent) => {
-      setIsSidebarOpen(event.matches)
-    }
-
-    setIsSidebarOpen(mediaQuery.matches)
-
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', listener)
-      return () => mediaQuery.removeEventListener('change', listener)
-    }
-
-    mediaQuery.addListener(listener)
-    return () => mediaQuery.removeListener(listener)
-  }, [])
-
-  useEffect(() => {
     if (!isSidebarOpen) return
     if (typeof window === 'undefined') return
 
@@ -1206,26 +1187,16 @@ const ForestryHarvesterApp: React.FC = () => {
               type="button"
               variant="outline"
               size="icon"
-              className="inline-flex border-green-900/30 bg-background/60 text-green-700 hover:bg-green-900/10 md:hidden"
+              className="inline-flex border-green-900/30 bg-background/60 text-green-700 hover:bg-green-900/10"
               onClick={toggleSidebar}
               aria-expanded={isSidebarOpen}
               aria-controls="sidebar-navigation"
               aria-label={isSidebarOpen ? t.navigation.toggleClose : t.navigation.toggleOpen}
+              aria-pressed={isSidebarOpen}
             >
-              {isSidebarOpen ? <ChevronLeft className="size-5" /> : <Menu className="size-5" />}
+              <Menu className="size-5" />
             </Button>
             <img src="/sodra-logo.png" alt="Södra logo" className="h-12 w-auto" />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="hidden md:inline-flex"
-              onClick={toggleSidebar}
-              aria-expanded={isSidebarOpen}
-              aria-controls="sidebar-navigation"
-            >
-              {isSidebarOpen ? t.navigation.toggleClose : t.navigation.toggleOpen}
-            </Button>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex gap-1 rounded-md border border-green-900/40 bg-background/60 p-1">
