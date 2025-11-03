@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Analytics } from '@vercel/analytics/react'
-import { Download, Menu, Upload, X } from 'lucide-react'
+import { Download, Linkedin, Menu, Upload, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -1867,11 +1867,12 @@ const ForestryHarvesterApp: React.FC = () => {
                     <span className="font-medium text-foreground">{member.name}</span>
                     <a
                       href={member.linkedin}
-                      className="text-green-700 transition hover:text-green-600"
+                      className="inline-flex items-center text-green-700 transition hover:text-green-600"
                       target="_blank"
                       rel="noreferrer noopener"
                     >
-                      {t.footer.viewProfile}
+                      <Linkedin aria-hidden="true" className="h-4 w-4" />
+                      <span className="sr-only">{t.footer.viewProfile}</span>
                     </a>
                   </li>
                 ))}
