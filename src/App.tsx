@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Analytics } from '@vercel/analytics/react'
-import { Download, Upload, X } from 'lucide-react'
+import { Download, Menu, Upload, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -131,6 +131,13 @@ const SPECIES_LABELS: Record<Language, Record<SpeciesCategory, string>> = {
 const translations: Record<Language, {
   languageToggle: { sv: string; en: string }
   header: { openAdmin: string; backToCalculator: string }
+  navigation: {
+    title: string
+    calculator: string
+    admin: string
+    toggleOpen: string
+    toggleClose: string
+  }
   upload: {
     title: string
     subtitle: string
@@ -236,6 +243,13 @@ const translations: Record<Language, {
     header: {
       openAdmin: 'Open admin settings',
       backToCalculator: 'Back to calculator',
+    },
+    navigation: {
+      title: 'Navigation',
+      calculator: 'Calculator',
+      admin: 'Admin settings',
+      toggleOpen: 'Open navigation menu',
+      toggleClose: 'Collapse navigation menu',
     },
     upload: {
       title: 'File Upload',
@@ -347,6 +361,13 @@ const translations: Record<Language, {
     header: {
       openAdmin: 'Öppna admininställningar',
       backToCalculator: 'Tillbaka till kalkylatorn',
+    },
+    navigation: {
+      title: 'Navigering',
+      calculator: 'Kalkylator',
+      admin: 'Admininställningar',
+      toggleOpen: 'Öppna navigationsmenyn',
+      toggleClose: 'Dölj navigationsmenyn',
     },
     upload: {
       title: 'Filuppladdning',
@@ -572,6 +593,7 @@ const ForestryHarvesterApp: React.FC = () => {
   const [newTotals, setNewTotals] = useState<NewTotals | null>(null)
   const [oldModelSummary, setOldModelSummary] = useState<LegacyTotals | null>(null)
   const [currentPath, setCurrentPath] = useState(() => (typeof window !== 'undefined' ? window.location.pathname : '/'))
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [showBulkPaste, setShowBulkPaste] = useState(false)
   const [bulkPriceText, setBulkPriceText] = useState('')
   const [hasUploaded, setHasUploaded] = useState(false)
@@ -611,6 +633,24 @@ const ForestryHarvesterApp: React.FC = () => {
     return () => window.removeEventListener('popstate', handler)
   }, [])
 
+  useEffect(() => {
+    if (!isSidebarOpen) return
+    if (typeof window === 'undefined') return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsSidebarOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isSidebarOpen])
+
+  useEffect(() => {
+    setIsSidebarOpen(false)
+  }, [currentPath])
+
   const navigate = useCallback((path: string) => {
     if (typeof window === 'undefined') return
     if (window.location.pathname === path) return
@@ -619,6 +659,25 @@ const ForestryHarvesterApp: React.FC = () => {
   }, [])
 
   const isAdminRoute = currentPath.startsWith('/admin')
+
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen((previous) => !previous)
+  }, [])
+
+  const handleNavigation = useCallback(
+    (path: string) => {
+      navigate(path)
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        setIsSidebarOpen(false)
+      }
+    },
+    [navigate],
+  )
+
+  const navItemClasses = (active: boolean) =>
+    `flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+      active ? 'bg-green-700 text-white shadow hover:bg-green-600' : 'text-foreground hover:bg-green-900/10'
+    }`
 
   const speciesPriceMatrix = useMemo(() => {
     const result: Record<SpeciesCategory, number[]> = {
@@ -1214,14 +1273,25 @@ const ForestryHarvesterApp: React.FC = () => {
   }, [language, results, resultsBySpecies, speciesSummaries, t])
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8">
-        <div className="flex items-center justify-between gap-4">
-          <img
-            src="/sodra-logo.png"
-            alt="Södra logo"
-            className="h-12 w-auto"
-          />
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-4 py-6 lg:px-8">
+        <header className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="inline-flex border-green-900/30 bg-background/60 text-green-700 hover:bg-green-900/10"
+              onClick={toggleSidebar}
+              aria-expanded={isSidebarOpen}
+              aria-controls="sidebar-navigation"
+              aria-label={isSidebarOpen ? t.navigation.toggleClose : t.navigation.toggleOpen}
+              aria-pressed={isSidebarOpen}
+            >
+              <Menu className="size-5" />
+            </Button>
+            <img src="/sodra-logo.png" alt="Södra logo" className="h-12 w-auto" />
+          </div>
           <div className="flex items-center gap-2">
             <div className="flex gap-1 rounded-md border border-green-900/40 bg-background/60 p-1">
               <Button
@@ -1243,29 +1313,67 @@ const ForestryHarvesterApp: React.FC = () => {
                 {t.languageToggle.en}
               </Button>
             </div>
-            {isAdminRoute ? (
-              <Button variant="outline" size="sm" onClick={() => navigate('/')}>
-                {t.header.backToCalculator}
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => navigate('/admin')}>
-                {t.header.openAdmin}
-              </Button>
-            )}
           </div>
-        </div>
+        </header>
 
-        {isAdminRoute ? (
-          <AdminPage
-            divisors={speciesDivisors}
-            onChange={(next) => setSpeciesDivisors(next)}
-            onReset={() => setSpeciesDivisors(normaliseDivisors(DEFAULT_SPECIES_DIVISORS))}
-            constants={{ k1: params.k1, k2: params.k2, c11: params.c11, maxPerTreeTime: params.maxPerTreeTime }}
-            onConstantChange={(key, value) => setParams((prev) => ({ ...prev, [key]: value }))}
-            language={language}
-          />
-        ) : (
-          <div className="space-y-12">
+        <div className="relative flex flex-1 flex-col gap-6 md:flex-row md:items-start md:gap-12">
+          {isSidebarOpen ? (
+            <div
+              className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-hidden="true"
+            />
+          ) : null}
+
+          <aside
+            id="sidebar-navigation"
+            className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col gap-6 border border-green-900/40 bg-background/95 p-4 shadow-lg transition-transform duration-200 md:sticky md:top-6 md:h-fit md:w-64 md:rounded-xl md:bg-background/70 md:shadow-none ${
+              isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
+            }`}
+          >
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-green-700">
+                {t.navigation.title}
+              </h2>
+              <nav className="mt-3 flex flex-col gap-2">
+                <a
+                  href="/"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    handleNavigation('/')
+                  }}
+                  className={navItemClasses(!isAdminRoute)}
+                  aria-current={!isAdminRoute ? 'page' : undefined}
+                >
+                  {t.navigation.calculator}
+                </a>
+                <a
+                  href="/admin"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    handleNavigation('/admin')
+                  }}
+                  className={navItemClasses(isAdminRoute)}
+                  aria-current={isAdminRoute ? 'page' : undefined}
+                >
+                  {t.navigation.admin}
+                </a>
+              </nav>
+            </div>
+          </aside>
+
+          <main className="flex-1 mt-6 md:mt-0">
+            {isAdminRoute ? (
+              <AdminPage
+                divisors={speciesDivisors}
+                onChange={(next) => setSpeciesDivisors(next)}
+                onReset={() => setSpeciesDivisors(normaliseDivisors(DEFAULT_SPECIES_DIVISORS))}
+                constants={{ k1: params.k1, k2: params.k2, c11: params.c11, maxPerTreeTime: params.maxPerTreeTime }}
+                onConstantChange={(key, value) => setParams((prev) => ({ ...prev, [key]: value }))}
+                language={language}
+              />
+            ) : (
+              <div className="space-y-12">
             {!hasUploaded ? (
               <Card className="border border-green-900/70 bg-background/60 p-6">
                 <div className="space-y-6">
@@ -1721,7 +1829,9 @@ const ForestryHarvesterApp: React.FC = () => {
             </Card>
           </div>
         )}
-    </div>
+          </main>
+        </div>
+      </div>
       <Analytics />
     </div>
   )
