@@ -362,8 +362,8 @@ const translations: Record<Language, {
       lovDivisor: 'Broadleaf divisor',
     },
     footer: {
-      ownership: 'Harvester App and all associated language assets are owned and maintained by the creators listed below.',
-      project: 'Built as part of a project at Linnaeus University.',
+      ownership: 'This app is owned and maintained by the creators listed below.',
+      project: 'Built as part of a project at Linnaeus University for the couse Team based innovation work.',
       createdBy: 'Created by',
       viewProfile: 'LinkedIn profile',
     },
@@ -486,8 +486,8 @@ const translations: Record<Language, {
       lovDivisor: 'Löv-divisor',
     },
     footer: {
-      ownership: 'Harvester App och all tillhörande terminologi ägs av skaparna nedan.',
-      project: 'Utvecklad inom ett projekt vid Linnéuniversitetet.',
+      ownership: 'Denna app ägs och underhålls av skaparna som listas nedan.',
+      project: 'Byggd som en del av ett projekt vid Linnéuniversitetet för kursen Teambaserat innovationsarbete.',
       createdBy: 'Skapad av',
       viewProfile: 'LinkedIn-profil',
     },
