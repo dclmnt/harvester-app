@@ -641,6 +641,10 @@ const ForestryHarvesterApp: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isSidebarOpen])
 
+  useEffect(() => {
+    setIsSidebarOpen(false)
+  }, [currentPath])
+
   const navigate = useCallback((path: string) => {
     if (typeof window === 'undefined') return
     if (window.location.pathname === path) return
